@@ -1,0 +1,199 @@
+/* Print Studio Styling for Waged QR Stickers */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+
+:root {
+  --sticker-accent: #2563eb;
+  --sticker-bg-soft: #eff6ff;
+  --sticker-header-bg: #0f172a;
+}
+
+body {
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+  background: #f1f5f9;
+  margin: 0;
+  padding: 20px;
+}
+
+.print-controls {
+  max-width: 960px;
+  margin: 0 auto 28px;
+  background: #ffffff;
+  padding: 22px 26px;
+  border-radius: 18px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.controls-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.control-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.control-field select,
+.control-field input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-family: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.sheet-container {
+  max-width: 960px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 22px;
+}
+
+.sheet-container.mini-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+/* Individual Printable Sticker Card */
+.sticker-card {
+  background: #ffffff;
+  border: 2px dashed #94a3b8;
+  border-radius: 18px;
+  padding: 18px;
+  text-align: center;
+  position: relative;
+  page-break-inside: avoid;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.sticker-card.theme-blue { --sticker-accent: #2563eb; --sticker-header-bg: #1e3a8a; }
+.sticker-card.theme-dark { --sticker-accent: #0f172a; --sticker-header-bg: #0f172a; }
+.sticker-card.theme-amber { --sticker-accent: #d97706; --sticker-header-bg: #18181b; }
+.sticker-card.theme-emerald { --sticker-accent: #059669; --sticker-header-bg: #064e3b; }
+
+.sticker-top-bar {
+  background: var(--sticker-header-bg);
+  color: #ffffff;
+  margin: -18px -18px 14px -18px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sticker-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.sticker-tag {
+  background: rgba(255,255,255,0.18);
+  color: #ffffff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sticker-item-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--sticker-accent);
+  margin-bottom: 10px;
+}
+
+.sticker-qr-frame {
+  background: #ffffff;
+  padding: 10px;
+  display: inline-block;
+  border-radius: 14px;
+  border: 2px solid var(--sticker-accent);
+}
+
+.sticker-qr-frame img {
+  width: 180px;
+  height: 180px;
+  display: block;
+}
+
+.sticker-card.layout-mini .sticker-qr-frame img {
+  width: 130px;
+  height: 130px;
+}
+
+.sticker-instruction {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 12px 0 6px;
+  line-height: 1.45;
+}
+
+.sticker-subnote {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+.sticker-footer {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: #475569;
+  font-weight: 700;
+}
+
+.cut-hint {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 6px;
+  display: block;
+}
+
+@media print {
+  body {
+    background: #ffffff;
+    padding: 0;
+  }
+  .print-controls, .no-print {
+    display: none !important;
+  }
+  .sheet-container {
+    max-width: 100%;
+    margin: 0;
+    gap: 14px;
+  }
+  .sticker-card {
+    border: 1.5px dashed #64748b;
+    box-shadow: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
