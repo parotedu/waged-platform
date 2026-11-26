@@ -1,7 +1,11 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'waged-super-secure-secret-key-2026-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'waged-dev-secret-change-in-production';
+
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.warn('[Security Warning] JWT_SECRET environment variable is not set in production!');
+}
 
 function hashPassword(password) {
   return bcrypt.hashSync(password, 12);
@@ -27,7 +31,27 @@ function verifyToken(token) {
   }
 }
 
-// Express middleware
+function getCookieOptions(req) {
+  const isHttps = Boolean(req.secure || req.headers['x-forwarded-proto'] === 'https');
+  return {
+    httpOnly: true,
+    secure: isHttps,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    sameSite: 'lax'
+  };
+}
+
+function getBaseUrl(req) {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '');
+  if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '');
+  if (req) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.get('host');
+    if (host) return `${proto}://${host}`;
+  }
+  return `http://localhost:${process.env.PORT || 4000}`;
+}
+
 function requireAuth(req, res, next) {
   const token = req.cookies.token || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
   if (!token) {
@@ -48,5 +72,7 @@ module.exports = {
   comparePassword,
   generateToken,
   verifyToken,
+  getCookieOptions,
+  getBaseUrl,
   requireAuth
 };

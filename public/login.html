@@ -3,76 +3,112 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تسجيل الدخول / حساب جديد - منصة واجد</title>
+  <meta name="theme-color" content="#8b5cf6">
+  <title>تسجيل الدخول / حساب جديد — واجد</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <script src="/js/theme.js"></script>
   <link rel="stylesheet" href="/css/style.css">
   <style>
+    .auth-shell {
+      min-height: calc(100vh - 70px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
     .auth-card {
-      max-width: 460px;
-      margin: 60px auto;
-      padding: 36px;
+      width: 100%;
+      max-width: 440px;
+      padding: 32px;
       border-radius: var(--radius-xl);
     }
     .auth-tabs {
       display: flex;
-      border-bottom: 2px solid var(--border-color);
-      margin-bottom: 24px;
+      gap: 6px;
+      background: var(--btn-sec-bg);
+      border: 1px solid var(--card-border);
+      padding: 5px;
+      border-radius: 12px;
+      margin-bottom: 22px;
     }
     .auth-tab {
       flex: 1;
       text-align: center;
-      padding: 12px;
-      font-weight: 700;
+      padding: 9px;
+      border-radius: 9px;
+      font-weight: 600;
+      font-size: 14px;
       color: var(--text-muted);
       cursor: pointer;
-      position: relative;
-      transition: color 0.2s;
+      transition: all 0.2s;
     }
     .auth-tab.active {
-      color: var(--primary);
+      background: var(--parot-gradient);
+      color: #ffffff;
     }
-    .auth-tab.active::after {
-      content: '';
+    .pass-wrap {
+      position: relative;
+    }
+    .pass-toggle {
       position: absolute;
-      bottom: -2px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--primary);
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 15px;
     }
     .alert-error {
-      background: #fee2e2;
-      border: 1px solid #f87171;
-      color: #991b1b;
-      padding: 12px;
-      border-radius: var(--radius-md);
-      margin-bottom: 18px;
-      font-size: 14px;
+      background: var(--danger-light);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      font-size: 13.5px;
       display: none;
     }
+    [data-theme="light"] .alert-error { color: #991b1b; }
   </style>
 </head>
 <body>
 
+  <div class="ambient-bg">
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+  </div>
+
   <nav class="navbar">
     <div class="container nav-container">
       <a href="/" class="logo">
-        <div class="logo-badge">W</div>
-        <span>واجد <small style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Waged</small></span>
+        <div class="logo-icon-wrap">
+          <img src="/logo.svg" alt="Waged Logo">
+        </div>
+        <span>واجد <small class="mono brand-gradient-text" style="font-size: 13px;">Waged</small></span>
       </a>
-      <a href="/" class="btn btn-outline btn-sm">الرئيسية</a>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button type="button" class="icon-btn theme-toggle-btn" onclick="toggleWagedTheme()" aria-label="تغيير المظهر">☀️</button>
+        <a href="/" class="btn btn-outline btn-sm">الرئيسية</a>
+      </div>
     </div>
   </nav>
 
-  <div class="container">
+  <main class="auth-shell">
     <div class="card auth-card">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <h2 style="font-size: 26px; font-weight: 900; color: var(--dark); margin-bottom: 6px;">مرحباً بك في واجد</h2>
-        <p style="color: var(--text-muted); font-size: 14px;">إدارة رموز الـ QR والتواصل الآمن لمقتنياتك</p>
+      <div style="text-align: center; margin-bottom: 22px;">
+        <div class="logo-icon-wrap" style="width: 60px; height: 60px; margin: 0 auto 12px; border-radius: 18px;">
+          <img src="/logo.svg" alt="Waged">
+        </div>
+        <h2 style="font-size: 24px; font-weight: 700;">مرحباً بك في <span class="brand-gradient-text">واجد</span></h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-top: 4px;">إدارة رموز الـ QR والتواصل الفوري المشفر</p>
       </div>
 
       <div class="auth-tabs">
         <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">تسجيل الدخول</div>
-        <div class="auth-tab" id="tabSignup" onclick="switchTab('signup')">إنشاء حساب جديد</div>
+        <div class="auth-tab" id="tabSignup" onclick="switchTab('signup')">إنشاء حساب</div>
       </div>
 
       <div class="alert-error" id="errorBox"></div>
@@ -81,11 +117,14 @@
       <form id="loginForm" onsubmit="handleLogin(event)">
         <div class="form-group">
           <label class="form-label">البريد الإلكتروني</label>
-          <input type="email" class="form-control" id="loginEmail" required placeholder="name@example.com">
+          <input type="email" class="form-control" id="loginEmail" required placeholder="name@example.com" autocomplete="email">
         </div>
         <div class="form-group">
           <label class="form-label">كلمة المرور</label>
-          <input type="password" class="form-control" id="loginPassword" required placeholder="••••••••">
+          <div class="pass-wrap">
+            <input type="password" class="form-control" id="loginPassword" required placeholder="••••••••" autocomplete="current-password" style="padding-left: 40px;">
+            <button type="button" class="pass-toggle" onclick="togglePass('loginPassword', this)">👁️</button>
+          </div>
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;" id="loginBtn">
           تسجيل الدخول
@@ -96,28 +135,57 @@
       <form id="signupForm" style="display: none;" onsubmit="handleSignup(event)">
         <div class="form-group">
           <label class="form-label">الاسم بالكامل</label>
-          <input type="text" class="form-control" id="signupName" required placeholder="مثال: أحمد محمد">
+          <input type="text" class="form-control" id="signupName" required placeholder="مثال: أحمد محمد" autocomplete="name">
         </div>
         <div class="form-group">
           <label class="form-label">البريد الإلكتروني</label>
-          <input type="email" class="form-control" id="signupEmail" required placeholder="name@example.com">
+          <input type="email" class="form-control" id="signupEmail" required placeholder="name@example.com" autocomplete="email">
         </div>
         <div class="form-group">
-          <label class="form-label">رقم الهاتف (اختياري - للاستخدام الداخلي فقط ولا يظهر لأحد)</label>
-          <input type="tel" class="form-control" id="signupPhone" placeholder="01xxxxxxxxx">
+          <label class="form-label">رقم الهاتف (اختياري وسري تماماً)</label>
+          <input type="tel" class="form-control" id="signupPhone" placeholder="01xxxxxxxxx" autocomplete="tel">
         </div>
         <div class="form-group">
           <label class="form-label">كلمة المرور</label>
-          <input type="password" class="form-control" id="signupPassword" required minlength="6" placeholder="لا تقل عن 6 أحرف">
+          <div class="pass-wrap">
+            <input type="password" class="form-control" id="signupPassword" required minlength="6" placeholder="6 أحرف فأكثر" autocomplete="new-password" style="padding-left: 40px;">
+            <button type="button" class="pass-toggle" onclick="togglePass('signupPassword', this)">👁️</button>
+          </div>
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;" id="signupBtn">
-          إنشاء حساب وتأكيد
+          إنشاء الحساب
         </button>
       </form>
     </div>
-  </div>
+  </main>
 
   <script>
+    const params = new URLSearchParams(window.location.search);
+    const selectedPlan = params.get('plan');
+
+    // Auto-redirect if already authenticated
+    fetch('/api/auth/me')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.user) {
+          window.location.href = getPostAuthUrl();
+        }
+      }).catch(() => {});
+
+    function getPostAuthUrl() {
+      if (selectedPlan && selectedPlan !== 'free') {
+        return `/dashboard.html?tab=billing&upgrade=${encodeURIComponent(selectedPlan)}`;
+      }
+      return '/dashboard.html';
+    }
+
+    function togglePass(id, btn) {
+      const inp = document.getElementById(id);
+      const isHidden = inp.type === 'password';
+      inp.type = isHidden ? 'text' : 'password';
+      btn.textContent = isHidden ? '🙈' : '👁️';
+    }
+
     function switchTab(tab) {
       const isLogin = tab === 'login';
       document.getElementById('tabLogin').classList.toggle('active', isLogin);
@@ -137,8 +205,6 @@
       document.getElementById('errorBox').style.display = 'none';
     }
 
-    // Check URL params for ?tab=signup
-    const params = new URLSearchParams(window.location.search);
     if (params.get('tab') === 'signup') {
       switchTab('signup');
     }
@@ -163,7 +229,7 @@
         if (!res.ok) throw new Error(data.error || 'فشل تسجيل الدخول');
 
         localStorage.setItem('waged_user', JSON.stringify(data.user));
-        window.location.href = '/dashboard.html';
+        window.location.href = getPostAuthUrl();
       } catch (err) {
         showError(err.message);
       } finally {
@@ -194,12 +260,12 @@
         if (!res.ok) throw new Error(data.error || 'فشل إنشاء الحساب');
 
         localStorage.setItem('waged_user', JSON.stringify(data.user));
-        window.location.href = '/dashboard.html';
+        window.location.href = getPostAuthUrl();
       } catch (err) {
         showError(err.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = 'إنشاء حساب وتأكيد';
+        btn.textContent = 'إنشاء الحساب';
       }
     }
   </script>

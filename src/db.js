@@ -2,16 +2,18 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const dbDir = path.join(__dirname, '..', 'data');
+const dbDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const db = new Database(path.join(dbDir, 'waged.db'));
+const dbPath = path.join(dbDir, 'waged.db');
+const db = new Database(dbPath);
 
 // Enable WAL mode for high concurrent performance and reliability
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+db.pragma('busy_timeout = 5000');
 
 // Initialize core schema
 db.exec(`
@@ -95,10 +97,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_chats_item_session ON chats(item_id, session_id);
   CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id);
   CREATE INDEX IF NOT EXISTS idx_sub_user ON subscription_logs(user_id);
+  CREATE INDEX IF NOT EXISTS idx_users_tg_token ON users(telegram_link_token);
 `);
 
 // Safe migrations for existing databases
-const userCols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+const userCols = db.prepare('PRAGMA table_info(users)').all().map(c => c.name);
 if (!userCols.includes('plan_id')) {
   db.exec("ALTER TABLE users ADD COLUMN plan_id TEXT DEFAULT 'free'");
 }
@@ -106,15 +109,15 @@ if (!userCols.includes('subscription_status')) {
   db.exec("ALTER TABLE users ADD COLUMN subscription_status TEXT DEFAULT 'active'");
 }
 if (!userCols.includes('subscription_expires_at')) {
-  db.exec("ALTER TABLE users ADD COLUMN subscription_expires_at DATETIME");
+  db.exec('ALTER TABLE users ADD COLUMN subscription_expires_at DATETIME');
 }
 if (!userCols.includes('webhook_url')) {
-  db.exec("ALTER TABLE users ADD COLUMN webhook_url TEXT");
+  db.exec('ALTER TABLE users ADD COLUMN webhook_url TEXT');
 }
 
-const chatCols = db.prepare("PRAGMA table_info(chats)").all().map(c => c.name);
+const chatCols = db.prepare('PRAGMA table_info(chats)').all().map(c => c.name);
 if (!chatCols.includes('unread_owner')) {
-  db.exec("ALTER TABLE chats ADD COLUMN unread_owner INTEGER DEFAULT 0");
+  db.exec('ALTER TABLE chats ADD COLUMN unread_owner INTEGER DEFAULT 0');
 }
 
 module.exports = db;

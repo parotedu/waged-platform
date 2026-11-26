@@ -1,0 +1,16 @@
+{
+  "name": "واجد | Waged by Parot",
+  "short_name": "واجد",
+  "description": "منصة التواصل الفوري والآمن وحماية المقتنيات عبر رموز QR الذكية",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#8b5cf6",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

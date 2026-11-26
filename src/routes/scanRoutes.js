@@ -2,8 +2,9 @@ const express = require('express');
 const crypto = require('crypto');
 const QRCode = require('qrcode');
 const db = require('../db');
+const { getBaseUrl } = require('../auth');
 const { notifyOwnerScan } = require('../telegram');
-const { getPlan } = require('../plans');
+const { getEffectivePlan } = require('../plans');
 
 const router = express.Router();
 
@@ -15,9 +16,7 @@ router.get('/qr/:code', async (req, res) => {
       return res.status(404).send('QR code not found');
     }
 
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.get('host');
-    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+    const baseUrl = getBaseUrl(req);
     const scanUrl = `${baseUrl}/scan.html?code=${item.public_code}`;
 
     const svg = await QRCode.toString(scanUrl, {
@@ -56,7 +55,7 @@ router.get('/info/:code', (req, res) => {
       return res.status(403).json({ error: 'تم تعطيل هذا الرمز مؤقتاً بواسطة المالك' });
     }
 
-    // Return strictly anonymous data (Zero PII)
+    // Strictly anonymous data (Zero PII)
     res.json({
       name: item.name,
       category: item.category,
@@ -73,9 +72,9 @@ router.get('/info/:code', (req, res) => {
 // Fire custom user webhook if configured and allowed by plan
 async function triggerUserWebhook(userId, payload) {
   try {
-    const user = db.prepare('SELECT plan_id, webhook_url FROM users WHERE id = ?').get(userId);
+    const user = db.prepare('SELECT plan_id, subscription_status, subscription_expires_at, webhook_url FROM users WHERE id = ?').get(userId);
     if (!user || !user.webhook_url) return;
-    const plan = getPlan(user.plan_id);
+    const plan = getEffectivePlan(user);
     if (!plan.capabilities.webhookAlerts) return;
 
     await fetch(user.webhook_url, {
@@ -131,7 +130,7 @@ router.post('/record', async (req, res) => {
         ? '🚨 هذا الغرض مُبلغ عنه كمفقود! شكراً لمبادرتك بالتواصل، محادثتك آمنة ومجهولة تماماً.'
         : 'مرحباً بك! هذه المحادثة آمنة ومجهولة تماماً. يمكنك مراسلة المالك هنا.';
       if (latitude && longitude) {
-        sysMsg += ' تم إرفاق موقعك الجغرافي التقريبي لمساعدة المالك.';
+        sysMsg += ' تم إرفاق موقعك الجغرافي لمساعدة المالك.';
       }
       db.prepare(`
         INSERT INTO messages (chat_id, sender_type, message, lat, lng)
@@ -139,12 +138,9 @@ router.post('/record', async (req, res) => {
       `).run(chat.id, sysMsg, latitude || null, longitude || null);
     }
 
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.get('host');
-    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+    const baseUrl = getBaseUrl(req);
     const ownerChatUrl = `${baseUrl}/dashboard.html?openChat=${chat.id}`;
 
-    // Real-time socket alert to owner dashboard
     const io = req.app.get('io');
     if (io) {
       io.to(`owner_${item.user_id}`).emit('scan_alert', {
@@ -158,7 +154,6 @@ router.post('/record', async (req, res) => {
       });
     }
 
-    // Async Telegram & Webhook alerts
     notifyOwnerScan(item.user_id, item.name, latitude, longitude, ownerChatUrl).catch(console.error);
     triggerUserWebhook(item.user_id, {
       event: 'qr_scanned',

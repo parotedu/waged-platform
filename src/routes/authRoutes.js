@@ -2,9 +2,9 @@ const express = require('express');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
-const { hashPassword, comparePassword, generateToken, requireAuth } = require('../auth');
-const { getPlan } = require('../plans');
-const { sendTelegramMessage } = require('../telegram');
+const { hashPassword, comparePassword, generateToken, getCookieOptions, requireAuth } = require('../auth');
+const { getEffectivePlan } = require('../plans');
+const { BOT_TOKEN, BOT_USERNAME, sendTelegramMessage } = require('../telegram');
 
 const router = express.Router();
 
@@ -58,12 +58,7 @@ router.post('/signup', authLimiter, (req, res) => {
     const user = { id: info.lastInsertRowid, name: cleanName, email: cleanEmail, plan_id: 'free' };
     const token = generateToken(user);
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      sameSite: 'lax'
-    });
+    res.cookie('token', token, getCookieOptions(req));
 
     res.status(201).json({ message: 'تم إنشاء الحساب بنجاح', user, token });
   } catch (err) {
@@ -86,17 +81,12 @@ router.post('/login', authLimiter, (req, res) => {
     }
 
     const token = generateToken(user);
+    res.cookie('token', token, getCookieOptions(req));
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      sameSite: 'lax'
-    });
-
+    const effectivePlan = getEffectivePlan(user);
     res.json({
       message: 'تم تسجيل الدخول بنجاح',
-      user: { id: user.id, name: user.name, email: user.email, plan_id: user.plan_id || 'free' },
+      user: { id: user.id, name: user.name, email: user.email, plan_id: effectivePlan.id },
       token
     });
   } catch (err) {
@@ -122,8 +112,21 @@ router.get('/me', requireAuth, (req, res) => {
     return res.status(404).json({ error: 'المستخدم غير موجود' });
   }
 
-  const plan = getPlan(user.plan_id);
-  res.json({ user: { ...user, plan } });
+  const plan = getEffectivePlan(user);
+  const botConfigured = Boolean(BOT_TOKEN && BOT_USERNAME);
+  const telegramDeepLink = botConfigured && user.telegram_link_token
+    ? `https://t.me/${BOT_USERNAME}?start=${user.telegram_link_token}`
+    : null;
+
+  res.json({
+    user: {
+      ...user,
+      plan,
+      botConfigured,
+      telegramBotUsername: BOT_USERNAME || null,
+      telegramDeepLink
+    }
+  });
 });
 
 // Update profile
@@ -194,11 +197,14 @@ router.post('/test-telegram', requireAuth, async (req, res) => {
   if (result && result.ok) {
     return res.json({ success: true, message: 'تم إرسال رسالة الاختبار إلى حسابك على تليجرام!' });
   }
-  res.json({
-    success: true,
-    simulated: true,
-    message: 'تم تسجيل معرفك بنجاح. (لإرسال رسائل فعلية على تليجرام تأكد من وضع TELEGRAM_BOT_TOKEN في ملف .env)'
-  });
+  if (result && result.simulated) {
+    return res.json({
+      success: true,
+      simulated: true,
+      message: 'تم التحقق من معرفك. (فعّل TELEGRAM_BOT_TOKEN في البيئة لإرسال تنبيهات حقيقية عبر البوت)'
+    });
+  }
+  return res.status(400).json({ error: result?.description || 'تعذر إرسال الرسالة إلى تليجرام، تأكد من أنك بدأت محادثة مع البوت' });
 });
 
 // Unlink Telegram

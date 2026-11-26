@@ -2,116 +2,129 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#8b5cf6">
   <title>واجد | تواصل فوري وآمن</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <script src="/js/theme.js"></script>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-5 0h3v2h-3v-2zm2 3h3v3h-3v-3zm3 0h2v2h-2v-2zm0 3h2v2h-2v-2zm-5 0h3v2h-3v-2z'/></svg>">
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    body {
-      background-color: #f1f5f9;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-    .scanner-view {
-      flex: 1;
+    .scanner-shell {
       display: flex;
       flex-direction: column;
       max-width: 600px;
       margin: 0 auto;
       width: 100%;
-      background: #ffffff;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
       height: 100vh;
+      height: 100dvh;
+      background: var(--card-bg);
+      backdrop-filter: blur(22px);
+      border-left: 1px solid var(--card-border);
+      border-right: 1px solid var(--card-border);
     }
-    .geo-prompt-card {
-      background: #eff6ff;
-      border: 1.5px solid #bfdbfe;
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      margin: 16px 20px;
+    .scanner-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--nav-bg);
+    }
+    .geo-card {
+      margin: 18px;
+      padding: 24px 20px;
       text-align: center;
+      border-radius: var(--radius-lg);
+      background: var(--primary-light);
+      border: 1px solid rgba(139, 92, 246, 0.35);
     }
   </style>
 </head>
 <body>
 
-  <div class="scanner-view">
-    
-    <!-- Top Bar -->
-    <div class="chat-header">
-      <div class="chat-info">
-        <div class="chat-avatar" id="itemAvatar">🚗</div>
+  <div class="ambient-bg">
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+  </div>
+
+  <div class="scanner-shell">
+    <!-- Top Header -->
+    <div class="scanner-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div class="logo-icon-wrap" id="itemAvatar" style="font-size: 18px;">🚗</div>
         <div>
-          <h2 style="font-size: 17px; font-weight: 800; color: var(--dark);" id="itemHeaderTitle">جاري التحميل...</h2>
-          <span class="badge badge-success" style="font-size: 11px;">🟢 المالك متصل ومتاح للتنبيه</span>
+          <h2 style="font-size: 16px; font-weight: 700;" id="itemHeaderTitle">جاري التحميل...</h2>
+          <span style="font-size: 11.5px; color: var(--accent); font-weight: 600;">● المالك متصل للتنبيه</span>
         </div>
       </div>
-      <a href="/" style="font-size: 13px; font-weight: 800; color: var(--primary);">
-        واجد 🛡️
-      </a>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" class="icon-btn theme-toggle-btn" onclick="toggleWagedTheme()" style="width: 34px; height: 34px; font-size: 14px;">☀️</button>
+        <a href="/" style="display: flex; align-items: center; gap: 4px;" title="واجد">
+          <img src="/logo.svg" alt="Waged" width="24" height="24">
+        </a>
+      </div>
     </div>
 
-    <!-- Security Assurance Banner -->
-    <div style="background: #f8fafc; border-bottom: 1px solid var(--border-color); padding: 8px 16px; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
-      <span>🔒 محادثة سرية 100% دون كشف رقم هاتفك</span>
-      <span id="locationBadge" style="display: none; color: #0284c7; font-weight: 700;">📍 تم إرفاق الموقع</span>
+    <!-- Trust Bar -->
+    <div style="background: var(--btn-sec-bg); border-bottom: 1px solid var(--card-border); padding: 7px 16px; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
+      <span>🔒 محادثة مشفرة ومجهولة — لا يتم كشف رقمك</span>
+      <span id="locationBadge" style="display: none; color: #60a5fa; font-weight: 600;">📍 تم إرفاق الموقع</span>
     </div>
 
     <!-- Lost Mode Urgent Alert -->
     <div id="lostBanner" class="lost-banner" style="display: none;">
-      <div style="font-size: 24px;">🚨</div>
+      <span style="font-size: 20px;">🚨</span>
       <div>
-        <strong>تنبيه غرض مفقود!</strong><br>
-        <span style="font-size: 12px; opacity: 0.95;">المالك يبحث عن هذا الغرض. نرجو مراسلته فوراً ومشاركة موقعك لتسليمه.</span>
+        <strong>تنبيه غرض مفقود!</strong>
+        <div style="font-size: 12px; opacity: 0.92;">المالك يبحث عن هذا الغرض. نرجو مراسلته ومشاركة موقعك لتسليمه.</div>
       </div>
     </div>
 
-    <!-- Location Permission Step -->
-    <div id="geoStep" class="geo-prompt-card" style="display: none;">
-      <div style="font-size: 32px; margin-bottom: 10px;">📍</div>
-      <h3 style="font-size: 17px; font-weight: 800; color: #1e3a8a; margin-bottom: 6px;">مشاركة الموقع الجغرافي</h3>
-      <p style="font-size: 13px; color: #3b82f6; margin-bottom: 16px; line-height: 1.5;">
-        لمساعدة مالك الغرض على معرفة المكان الدقيق للسيارة أو الأداة، هل ترغب في مشاركة إحداثيات موقعك الجغرافي؟
+    <!-- Owner Custom Message -->
+    <div id="ownerMsgCard" style="display: none; margin: 12px 16px 0; padding: 12px 16px; background: var(--warning-light); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); font-size: 13.5px;">
+      <strong style="color: #fbbf24;">رسالة المالك:</strong>
+      <p id="ownerMsgText" style="margin-top: 3px;"></p>
+    </div>
+
+    <!-- Step 1: Location Prompt (Shown cleanly before chat starts) -->
+    <div id="geoStep" class="geo-card" style="display: none;">
+      <div style="font-size: 32px; margin-bottom: 8px;">📍</div>
+      <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">مشاركة الموقع الجغرافي</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.55;">
+        هل ترغب في مشاركة موقعك الحالي لمساعدة المالك على تحديد مكان الغرض بدقة؟
       </p>
       <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
         <button class="btn btn-primary btn-sm" onclick="grantLocation()" id="grantGeoBtn">
-          📍 نعم، شارك موقعي
+          📍 مشاركة وبدء المحادثة
         </button>
         <button class="btn btn-outline btn-sm" onclick="skipLocation()">
-          المتابعة بدون موقع
+          بدء المحادثة بدون موقع
         </button>
       </div>
     </div>
 
-    <!-- Owner Custom Message Card -->
-    <div id="ownerMsgCard" style="display: none; margin: 14px 20px 0; padding: 12px 16px; background: #fefce8; border: 1.5px solid #fef08a; border-radius: var(--radius-md); font-size: 14px; color: #854d0e;">
-      <strong>ملاحظة من المالك:</strong>
-      <p id="ownerMsgText" style="margin-top: 4px; line-height: 1.4;"></p>
-    </div>
-
-    <!-- Messages Container -->
+    <!-- Chat Area -->
     <div class="chat-messages" id="chatMessages">
-      <div style="text-align: center; color: var(--text-muted); margin: auto;">جاري تجهيز المحادثة...</div>
+      <div style="text-align: center; color: var(--text-muted); margin: auto; font-size: 14px;">جاري تجهيز المحادثة...</div>
     </div>
 
     <div class="typing-indicator" id="typingIndicator">المالك يكتب الآن...</div>
 
-    <!-- Quick Replies based on Category -->
-    <div class="quick-replies" id="quickReplies"></div>
+    <!-- Quick Replies -->
+    <div class="quick-replies" id="quickReplies" style="display: none;"></div>
 
-    <!-- Message Input Bar -->
-    <form class="chat-input-area" id="chatForm" onsubmit="handleSendMessage(event)">
-      <button type="button" class="btn btn-outline btn-sm" onclick="sendLiveLocationPin()" title="إرسال موقعي الحالي" style="border-radius: 50%; width: 42px; height: 42px; padding: 0;">
+    <!-- Message Input -->
+    <form class="chat-input-area" id="chatForm" style="display: none;" onsubmit="handleSendMessage(event)">
+      <button type="button" class="icon-btn" onclick="sendLiveLocationPin()" title="إرسال موقعي الحالي" style="width: 40px; height: 40px; flex-shrink: 0;">
         📍
       </button>
       <input type="text" class="chat-input" id="messageInput" placeholder="اكتب رسالتك للمالك هنا..." required autocomplete="off" oninput="emitTyping()">
-      <button type="submit" class="btn btn-primary" style="border-radius: 999px; padding: 10px 20px;">
+      <button type="submit" class="btn btn-primary" style="border-radius: 999px; padding: 9px 20px;">
         إرسال
       </button>
     </form>
-
   </div>
 
   <div class="toast-container" id="toastContainer"></div>

@@ -41,16 +41,16 @@ function enableSoundAlerts() {
   soundEnabled = !soundEnabled;
   const btn = document.getElementById('soundToggleBtn');
   if (soundEnabled) {
-    btn.textContent = '🔊 صوت التنبيهات مفعل';
-    btn.className = 'btn btn-success btn-sm';
+    btn.textContent = '🔔';
+    btn.style.borderColor = 'var(--accent)';
     playNotificationChime();
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
-    showToast('تم تفعيل التنبيهات الصوتية الفورية', 'success');
+    showToast('تم تفعيل صوت التنبيهات اللحظية', 'success');
   } else {
-    btn.textContent = '🔔 تفعيل صوت التنبيهات';
-    btn.className = 'btn btn-outline btn-sm';
+    btn.textContent = '🔕';
+    btn.style.borderColor = 'var(--card-border)';
   }
 }
 
@@ -66,6 +66,40 @@ function closeConfirmModal() {
   confirmCallback = null;
 }
 
+// Close open card dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.dropdown-wrap')) {
+    document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+// Delegated item-card events (safe against XSS / quote escaping issues)
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const itemId = Number(btn.dataset.id);
+  const item = userItems.find(i => i.id === itemId);
+
+  if (action === 'toggle-menu') {
+    const menu = btn.parentElement.querySelector('.dropdown-menu');
+    const wasOpen = menu.classList.contains('open');
+    document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+    if (!wasOpen) menu.classList.add('open');
+    return;
+  }
+
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+  if (!item) return;
+
+  if (action === 'copy') copyScanLink(item.scanUrl);
+  else if (action === 'edit') openEditModal(item.id);
+  else if (action === 'toggle-lost') toggleLostStatus(item);
+  else if (action === 'scans') viewScans(item.id, item.name);
+  else if (action === 'download') downloadQr(item.qrDataUrl, item.name);
+  else if (action === 'delete') deleteItem(item.id);
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('confirmYesBtn').addEventListener('click', () => {
     if (confirmCallback) confirmCallback();
@@ -79,11 +113,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const openChatId = params.get('openChat');
   const openTab = params.get('tab');
+  const upgradePlan = params.get('upgrade');
+
   if (openChatId) {
     showDashboardTab('inbox');
-    setTimeout(() => openChat(openChatId), 400);
+    setTimeout(() => openChat(openChatId), 350);
   } else if (openTab) {
     showDashboardTab(openTab);
+    if (openTab === 'billing' && upgradePlan) {
+      showToast('اختر دورة الدفع واضغط ترقية لتفعيل باقتك المختارة', 'info');
+    }
   }
 });
 
@@ -92,9 +131,9 @@ function initSocket() {
 
   socket.on('scan_alert', (alertData) => {
     playNotificationChime();
-    showToast(`🚨 تم مسح رمز: ${alertData.itemName}!`, 'warning');
+    showToast(`🚨 تم مسح رمز: ${alertData.itemName}`, 'warning');
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('منصة واجد - مسح جديد 🚨', { body: `تم مسح رمز ${alertData.itemName}` });
+      new Notification('منصة واجد — مسح جديد', { body: `تم مسح رمز ${alertData.itemName}` });
     }
     loadItems();
     loadConversations();
@@ -103,7 +142,7 @@ function initSocket() {
   socket.on('owner_new_message', (msg) => {
     playNotificationChime();
     if (Number(msg.chat_id) !== Number(activeChatId)) {
-      showToast(`💬 رسالة جديدة على (${msg.item_name}): ${msg.message.slice(0, 40)}`, 'info');
+      showToast(`💬 رسالة جديدة (${msg.item_name}): ${msg.message.slice(0, 40)}`, 'info');
     }
     loadConversations();
   });
@@ -136,42 +175,61 @@ async function loadUserData() {
     }
     const data = await res.json();
     currentUser = data.user;
-    document.getElementById('userNameBadge').textContent = `👤 ${currentUser.name}`;
+    document.getElementById('userNameBadge').textContent = currentUser.name;
     document.getElementById('userPlanBadge').textContent = currentUser.plan?.name || 'الباقة المجانية';
 
-    // Fill settings form
     document.getElementById('settingsName').value = currentUser.name || '';
     document.getElementById('settingsEmail').value = currentUser.email || '';
     document.getElementById('settingsPhone').value = currentUser.phone || '';
     document.getElementById('webhookUrlInput').value = currentUser.webhook_url || '';
 
-    updateTelegramBanner(currentUser.telegram_chat_id);
+    updateTelegramUI(currentUser);
   } catch (err) {
     console.error(err);
     window.location.href = '/login.html';
   }
 }
 
-function updateTelegramBanner(chatId) {
-  const text = document.getElementById('tgStatusText');
+function updateTelegramUI(user) {
+  const banner = document.getElementById('telegramBanner');
+  const pill = document.getElementById('tgConnectedPill');
   const actionContainer = document.getElementById('tgActionContainer');
+  const settingsInfo = document.getElementById('settingsTgInfo');
+  const settingsActions = document.getElementById('settingsTgActions');
 
-  if (chatId) {
-    text.innerHTML = `✅ <strong>مفعل بنجاح!</strong> حسابك مربوط برقم الشات: <code>${escapeHtml(chatId)}</code> وتصلك التنبيهات فورياً.`;
-    actionContainer.innerHTML = `
-      <button class="btn btn-primary btn-sm" onclick="testTelegramAlert()" style="background: #0088cc;">
-        🧪 إرسال إشعار تجريبي
-      </button>
-      <button class="btn btn-outline btn-sm" onclick="unlinkTelegram()" style="border-color: #ef4444; color: #ef4444;">
-        إلغاء الربط
-      </button>
+  // Auto-link modal setup
+  if (user.telegramDeepLink) {
+    document.getElementById('tgAutoBox').style.display = 'block';
+    document.getElementById('tgDeepLinkBtn').href = user.telegramDeepLink;
+  } else {
+    document.getElementById('tgAutoBox').style.display = 'none';
+  }
+
+  if (user.telegram_chat_id) {
+    banner.style.display = 'none';
+    pill.style.display = 'inline-flex';
+    pill.className = 'badge badge-success';
+    pill.innerHTML = `✈️ تليجرام متصل`;
+    pill.style.cursor = 'pointer';
+    pill.title = 'إعدادات تليجرام';
+    pill.onclick = () => showDashboardTab('settings');
+
+    settingsInfo.innerHTML = `✅ تليجرام متصل بمعرف: <code>${escapeHtml(user.telegram_chat_id)}</code>`;
+    settingsActions.innerHTML = `
+      <button type="button" class="btn btn-primary btn-sm" onclick="testTelegramAlert()">🧪 إشعار تجريبي</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="unlinkTelegram()" style="color: #f87171;">إلغاء الربط</button>
     `;
   } else {
-    text.textContent = 'اربط حسابك بتليجرام ليصلك إشعار فوري بصوت ورابط اللوكيشن بمجرد أن يمسح أي شخص رمز سيارتك أو غرضك!';
-    actionContainer.innerHTML = `
-      <button class="btn btn-primary btn-sm" onclick="openTgModal()" style="background: #0088cc;">
-        ⚙️ إعداد ربط تليجرام
-      </button>
+    pill.style.display = 'none';
+    banner.style.display = 'flex';
+    actionContainer.innerHTML = user.telegramDeepLink
+      ? `<a href="${user.telegramDeepLink}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">✈️ ربط تلقائي الآن</a>
+         <button type="button" class="btn btn-outline btn-sm" onclick="openTgModal()">ربط برقم ID</button>`
+      : `<button type="button" class="btn btn-primary btn-sm" onclick="openTgModal()">⚙️ ربط تليجرام</button>`;
+
+    settingsInfo.textContent = 'حساب تليجرام غير مربوط بعد.';
+    settingsActions.innerHTML = `
+      <button type="button" class="btn btn-primary btn-sm" onclick="openTgModal()">✈️ ربط تليجرام</button>
     `;
   }
 }
@@ -180,9 +238,10 @@ async function testTelegramAlert() {
   try {
     const res = await fetch('/api/auth/test-telegram', { method: 'POST' });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'تعذر الإرسال');
     showToast(data.message || 'تم الإرسال', 'success');
-  } catch {
-    showToast('حدث خطأ أثناء الاختبار', 'error');
+  } catch (err) {
+    showToast(err.message, 'error');
   }
 }
 
@@ -202,10 +261,10 @@ async function loadItems() {
     const grid = document.getElementById('itemsGrid');
     if (userItems.length === 0) {
       grid.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; background: #fff; border-radius: var(--radius-lg); border: 2px dashed var(--border-color);">
-          <div style="font-size: 40px; margin-bottom: 14px;">🏷️</div>
-          <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">لم تقم بإنشاء أي رمز QR حتى الآن</h3>
-          <p style="color: var(--text-muted); margin-bottom: 20px;">ابدأ بإضافة سيارتك أو لابتوبك أو أي مقتنيات لحمايتها فوراً</p>
+        <div class="card" style="grid-column: 1/-1; text-align: center; padding: 54px 20px; border-style: dashed;">
+          <div style="font-size: 38px; margin-bottom: 12px;">🏷️</div>
+          <h3 style="font-size: 19px; font-weight: 700; margin-bottom: 6px;">لا توجد رموز QR مسجلة بعد</h3>
+          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 18px;">أضف سيارتك أو لابتوبك أو حقيبتك واطبع الملصق فوراً</p>
           <button class="btn btn-primary" onclick="openCreateModal()">➕ إنشاء أول رمز QR</button>
         </div>
       `;
@@ -218,60 +277,54 @@ async function loadItems() {
         laptop: '💻 لابتوب',
         bag: '💼 حقيبة',
         keys: '🔑 مفاتيح',
-        pet: '🐾 حيوان أليف',
+        pet: '🐾 أليف',
         other: '📦 غرض'
       }[item.category] || '📦 غرض';
 
-      let statusBadge = `<span class="badge badge-success">🟢 نشط</span>`;
+      let statusBadge = `<span class="badge badge-success">● نشط</span>`;
       if (item.status === 'lost') statusBadge = `<span class="badge badge-danger">🚨 مفقود</span>`;
-      if (item.status === 'disabled') statusBadge = `<span class="badge badge-warning">⛔ معطل</span>`;
+      if (item.status === 'disabled') statusBadge = `<span class="badge badge-warning">معطل</span>`;
+
+      const lostActionLabel = item.status === 'lost' ? '✅ إنهاء وضع المفقود' : '🚨 تفعيل وضع المفقود';
 
       return `
         <div class="card item-card">
           <div>
-            <div class="item-header">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
               <div>
                 <div style="display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;">
                   <span class="badge badge-primary">${catIcon}</span>
                   ${statusBadge}
                 </div>
-                <h3 class="item-title">${escapeHtml(item.name)}</h3>
+                <h3 style="font-size: 17px; font-weight: 700;">${escapeHtml(item.name)}</h3>
               </div>
-              <span class="badge ${item.scan_count > 0 ? 'badge-success' : 'badge-warning'}">
-                👁️ ${item.scan_count} مسح
-              </span>
+              <span class="badge badge-info">${item.scan_count} مسح</span>
             </div>
 
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4;">
-              ${item.custom_message ? escapeHtml(item.custom_message) : 'لا توجد رسالة مخصصة'}
-            </p>
-
-            <div class="item-qr-wrap">
+            <div class="item-qr-frame">
               <img src="${item.qrDataUrl}" alt="QR Code">
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">كود: <code>${item.public_code}</code></div>
+              <div class="item-qr-code-text">${escapeHtml(item.public_code)}</div>
             </div>
           </div>
 
-          <div>
-            <div class="item-actions">
-              <a href="/print.html?code=${item.public_code}" target="_blank" class="btn btn-outline btn-sm" style="flex: 1;">
-                🖨️ طباعة ملصق
-              </a>
-              <button onclick="openEditModal(${item.id})" class="btn btn-outline btn-sm" title="تعديل الغرض والحالة">
-                ✏️ تعديل
+          <div class="item-card-footer">
+            <a href="/print.html?code=${encodeURIComponent(item.public_code)}" target="_blank" class="btn btn-outline btn-sm" style="flex: 1;">
+              🖨️ طباعة
+            </a>
+            <button type="button" class="btn btn-outline btn-sm" data-action="copy" data-id="${item.id}" style="flex: 1;">
+              🔗 نسخ الرابط
+            </button>
+            <div class="dropdown-wrap">
+              <button type="button" class="btn btn-outline btn-sm" data-action="toggle-menu" data-id="${item.id}" title="خيارات إضافية">
+                ⋯
               </button>
-              <button onclick="copyScanLink('${item.scanUrl}')" class="btn btn-outline btn-sm" title="نسخ رابط المسح">
-                🔗 نسخ
-              </button>
-              <button onclick="downloadQr('${item.qrDataUrl}', '${escapeHtml(item.name)}')" class="btn btn-outline btn-sm" title="تحميل صورة الـ QR">
-                📥 تحميل
-              </button>
-              <button onclick="viewScans(${item.id}, '${escapeHtml(item.name)}')" class="btn btn-outline btn-sm" title="سجل المواقع">
-                📍 المواقع
-              </button>
-              <button onclick="deleteItem(${item.id})" class="btn btn-sm" style="color: #ef4444; background: #fee2e2;" title="حذف الرمز">
-                🗑️
-              </button>
+              <div class="dropdown-menu">
+                <button type="button" class="dropdown-item" data-action="edit" data-id="${item.id}">✏️ تعديل التفاصيل</button>
+                <button type="button" class="dropdown-item" data-action="toggle-lost" data-id="${item.id}">${lostActionLabel}</button>
+                <button type="button" class="dropdown-item" data-action="scans" data-id="${item.id}">📍 سجل المواقع</button>
+                <button type="button" class="dropdown-item" data-action="download" data-id="${item.id}">📥 تحميل صورة QR</button>
+                <button type="button" class="dropdown-item danger" data-action="delete" data-id="${item.id}">🗑️ حذف الرمز</button>
+              </div>
             </div>
           </div>
         </div>
@@ -282,13 +335,29 @@ async function loadItems() {
   }
 }
 
+async function toggleLostStatus(item) {
+  const nextStatus = item.status === 'lost' ? 'active' : 'lost';
+  try {
+    const res = await fetch(`/api/items/${item.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: nextStatus })
+    });
+    if (!res.ok) throw new Error('تعذر تغيير الحالة');
+    showToast(nextStatus === 'lost' ? '🚨 تم تفعيل وضع المفقودات العاجل' : 'تمت إعادة الغرض للوضع الطبيعي', 'success');
+    await loadItems();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
 function showDashboardTab(tab) {
   const tabs = ['items', 'inbox', 'billing', 'settings'];
   tabs.forEach(t => {
     const sec = document.getElementById(`${t}Section`);
     const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
     if (sec) sec.style.display = t === tab ? 'block' : 'none';
-    if (btn) btn.className = t === tab ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+    if (btn) btn.classList.toggle('active', t === tab);
   });
 }
 
@@ -304,30 +373,27 @@ async function loadConversations() {
     const list = document.getElementById('conversationsList');
     if (convs.length === 0) {
       list.innerHTML = `
-        <div style="color: var(--text-muted); font-size: 14px; text-align: center; padding: 40px 10px;">
-          لا توجد محادثات حتى الآن.<br>
-          <small>بمجرد أن يمسح أحد رمزك ويرسل رسالة، ستظهر هنا فوراً.</small>
+        <div style="color: var(--text-muted); font-size: 13.5px; text-align: center; padding: 36px 10px;">
+          لا توجد محادثات حتى الآن.
         </div>
       `;
       return;
     }
 
     list.innerHTML = convs.map(c => `
-      <div onclick="openChat(${c.chat_id})" style="padding: 12px 14px; border-radius: var(--radius-md); border: 1.5px solid ${activeChatId == c.chat_id ? 'var(--primary)' : 'var(--border-color)'}; background: ${activeChatId == c.chat_id ? 'var(--primary-light)' : '#ffffff'}; cursor: pointer; transition: all 0.2s;">
+      <div onclick="openChat(${c.chat_id})" style="padding: 12px; border-radius: var(--radius-sm); border: 1px solid ${activeChatId == c.chat_id ? 'var(--primary)' : 'var(--card-border)'}; background: ${activeChatId == c.chat_id ? 'var(--primary-light)' : 'var(--btn-sec-bg)'}; cursor: pointer; transition: all 0.2s;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-          <strong style="font-size: 14px; color: var(--dark);">${escapeHtml(c.item_name)}</strong>
+          <strong style="font-size: 13.5px;">${escapeHtml(c.item_name)}</strong>
           <div style="display: flex; align-items: center; gap: 6px;">
             ${c.unread_owner > 0 ? `<span class="badge badge-danger" style="padding: 2px 7px;">${c.unread_owner}</span>` : ''}
             <span style="font-size: 11px; color: var(--text-muted);">${formatTime(c.updated_at)}</span>
           </div>
         </div>
-        <div style="font-size: 13px; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+        <div style="font-size: 12.5px; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
           ${c.last_message ? escapeHtml(c.last_message) : 'محادثة جديدة'}
         </div>
         ${c.scan_lat && c.scan_lng ? `
-          <div style="margin-top: 6px; font-size: 11px; color: #0284c7; display: flex; align-items: center; gap: 4px;">
-            📍 موقع جغرافي متوفر
-          </div>
+          <div style="margin-top: 5px; font-size: 11px; color: #60a5fa;">📍 موقع جغرافي مرفق</div>
         ` : ''}
       </div>
     `).join('');
@@ -342,15 +408,24 @@ async function openChat(chatId) {
   loadConversations();
 
   const messagesBox = document.getElementById('dashChatMessages');
-  document.getElementById('dashChatForm').style.display = 'block';
+  document.getElementById('dashChatForm').style.display = 'flex';
   messagesBox.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin: auto;">جاري جلب الرسائل...</div>';
 
   try {
     const res = await fetch(`/api/chat/${chatId}/messages`);
     const data = await res.json();
 
-    document.getElementById('activeChatTitle').textContent = `محادثة حول: ${data.itemName}`;
-    document.getElementById('activeChatSub').textContent = `تواصل آمن ومجهول مع الزائر`;
+    document.getElementById('activeChatTitle').textContent = `محادثة: ${data.itemName}`;
+    document.getElementById('activeChatSub').textContent = 'تواصل آمن ومجهول مع الزائر';
+
+    const actionsEl = document.getElementById('activeChatActions');
+    let actionsHtml = '';
+    if (data.scanLocation && data.scanLocation.lat && data.scanLocation.lng) {
+      const mapUrl = `https://www.google.com/maps?q=${data.scanLocation.lat},${data.scanLocation.lng}`;
+      actionsHtml += `<a href="${mapUrl}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">📍 موقع المسح</a>`;
+    }
+    actionsHtml += `<button type="button" class="btn btn-outline btn-sm" style="color: #f87171;" onclick="deleteActiveChat(${chatId})">🗑️ حذف</button>`;
+    actionsEl.innerHTML = actionsHtml;
 
     if (socket) {
       socket.emit('join_chat', { chatId });
@@ -360,8 +435,28 @@ async function openChat(chatId) {
     loadConversations();
   } catch (err) {
     console.error(err);
-    messagesBox.innerHTML = '<div style="color: #ef4444; text-align: center;">فشل في تحميل المحادثة</div>';
+    messagesBox.innerHTML = '<div style="color: #f87171; text-align: center;">فشل في تحميل المحادثة</div>';
   }
+}
+
+function deleteActiveChat(chatId) {
+  askConfirm('حذف المحادثة', 'هل تريد حذف سجل هذه المحادثة نهائياً؟', async () => {
+    try {
+      const res = await fetch(`/api/chat/${chatId}`, { method: 'DELETE' });
+      if (res.ok) {
+        activeChatId = null;
+        document.getElementById('activeChatTitle').textContent = 'اختر محادثة من القائمة';
+        document.getElementById('activeChatSub').textContent = 'تواصل آمن ومجهول';
+        document.getElementById('activeChatActions').innerHTML = '';
+        document.getElementById('dashChatForm').style.display = 'none';
+        document.getElementById('dashChatMessages').innerHTML = '<div style="text-align: center; color: var(--text-muted); margin: auto;">تم حذف المحادثة</div>';
+        showToast('تم حذف المحادثة', 'info');
+        loadConversations();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  });
 }
 
 function renderChatMessages(messages) {
@@ -393,7 +488,7 @@ function appendChatMessage(msg, autoScroll = true) {
     locationHtml = `
       <div class="msg-location-card">
         📍 <strong>موقع المسح:</strong>
-        <a href="${mapUrl}" target="_blank" style="color: #2563eb; text-decoration: underline; margin-right: 6px;">
+        <a href="${mapUrl}" target="_blank" rel="noopener" style="color: #60a5fa; text-decoration: underline;">
           عرض على Google Maps
         </a>
       </div>
@@ -475,7 +570,7 @@ function closeCreateModal() {
 }
 
 function updateDefaultMsg() {
-  if (document.getElementById('editItemId').value) return; // Don't overwrite on edit
+  if (document.getElementById('editItemId').value) return;
   const cat = document.getElementById('itemCategory').value;
   const msgInput = document.getElementById('itemMessage');
   const defaults = {
@@ -531,7 +626,7 @@ async function handleSaveItem(e) {
     showToast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'تأكيد وحفظ رمز الـ QR';
+    btn.textContent = 'حفظ رمز الـ QR';
   }
 }
 
@@ -589,26 +684,26 @@ function renderBillingPlans() {
     const periodLabel = cycle === 'yearly' ? '/ سنوياً' : '/ شهرياً';
 
     return `
-      <div class="pricing-card ${plan.id === 'pro' ? 'featured' : ''}">
+      <div class="card pricing-card ${plan.id === 'pro' ? 'featured' : ''}">
         <div>
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="font-size: 20px; font-weight: 800;">${plan.name}</h3>
+            <h3 style="font-size: 18px; font-weight: 700;">${plan.name}</h3>
             <span class="badge ${isCurrent ? 'badge-success' : 'badge-primary'}">${isCurrent ? 'باقتك الحالية' : plan.badge}</span>
           </div>
           <div class="pricing-price">
-            ${price === 0 ? 'مجاناً' : `${price} <span style="font-size:18px;">${plan.currency}</span>`}
+            ${price === 0 ? 'مجاناً' : `${price} <span style="font-size:16px;">${plan.currency}</span>`}
             ${price > 0 ? `<span>${periodLabel}</span>` : ''}
           </div>
           <ul class="pricing-features">
-            ${plan.features.map(f => `<li>✅ <span>${f}</span></li>`).join('')}
+            ${plan.features.map(f => `<li>✓ <span>${f}</span></li>`).join('')}
           </ul>
         </div>
         <button
           onclick="subscribePlan('${plan.id}')"
           class="btn ${isCurrent ? 'btn-outline' : 'btn-primary'}"
-          style="width: 100%; padding: 12px;"
+          style="width: 100%; padding: 11px;"
           ${isCurrent ? 'disabled' : ''}>
-          ${isCurrent ? 'مفعلة حالياً' : (price === 0 ? 'العودة للمجانية' : 'ترقية وتفعيل الباقة')}
+          ${isCurrent ? 'مفعلة حالياً' : (price === 0 ? 'العودة للمجانية' : 'ترقية وتفعيل')}
         </button>
       </div>
     `;
@@ -646,13 +741,13 @@ function renderInvoices(invoices) {
   box.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 10px;">
       ${invoices.map(inv => `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; background: var(--btn-sec-bg); border-radius: 10px; border: 1px solid var(--card-border); flex-wrap: wrap; gap: 8px;">
           <div>
-            <strong>فاتورة #${inv.reference_code}</strong> — <span class="badge badge-primary">${inv.plan_id.toUpperCase()}</span>
+            <strong>#${escapeHtml(inv.reference_code)}</strong> — <span class="badge badge-primary">${escapeHtml(inv.plan_id.toUpperCase())}</span>
             <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${new Date(inv.created_at).toLocaleString('ar-EG')}</div>
           </div>
-          <div style="font-weight: 800; color: var(--accent);">
-            ${inv.amount} ${inv.currency} (${inv.billing_cycle === 'yearly' ? 'سنوي' : 'شهري'})
+          <div style="font-weight: 700; color: var(--accent);">
+            ${inv.amount} ${escapeHtml(inv.currency)} (${inv.billing_cycle === 'yearly' ? 'سنوي' : 'شهري'})
           </div>
         </div>
       `).join('')}
@@ -660,7 +755,7 @@ function renderInvoices(invoices) {
   `;
 }
 
-// Account Settings Handlers
+// Settings Handlers
 async function handleUpdateProfile(e) {
   e.preventDefault();
   const name = document.getElementById('settingsName').value.trim();
@@ -716,7 +811,7 @@ async function handleSaveWebhook(e) {
   }
 }
 
-// Telegram modal
+// Telegram Modal
 function openTgModal() {
   document.getElementById('tgModal').classList.add('active');
 }
@@ -747,7 +842,7 @@ async function handleSaveTgChatId(e) {
 }
 
 function unlinkTelegram() {
-  askConfirm('إلغاء ربط تليجرام', 'هل تريد بالتأكيد إلغاء ربط تليجرام؟ لن تصلك تنبيهات فورية على هاتفك.', async () => {
+  askConfirm('إلغاء ربط تليجرام', 'لن تصلك تنبيهات فورية على تليجرام عند مسح رموزك. هل تريد المتابعة؟', async () => {
     try {
       const res = await fetch('/api/auth/unlink-telegram', { method: 'POST' });
       if (res.ok) {
@@ -760,7 +855,7 @@ function unlinkTelegram() {
   });
 }
 
-// Scans & location modal
+// Scans Modal
 async function viewScans(itemId, itemName) {
   document.getElementById('scansModalTitle').textContent = `سجل مسح: ${itemName}`;
   const content = document.getElementById('scansModalContent');
@@ -778,21 +873,21 @@ async function viewScans(itemId, itemName) {
     }
 
     content.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
         ${scans.map(s => {
-          let mapHtml = '<span style="color: var(--text-muted); font-size: 12px;">الموقع الجغرافي لم يتم مشاركته</span>';
+          let mapHtml = '<span style="color: var(--text-muted); font-size: 12px;">بدون إحداثيات</span>';
           if (s.latitude && s.longitude) {
             const url = `https://www.google.com/maps?q=${s.latitude},${s.longitude}`;
             mapHtml = `
-              <a href="${url}" target="_blank" class="btn btn-primary btn-sm" style="display: inline-flex; font-size: 12px; padding: 4px 10px;">
-                📍 فتح في Google Maps (${s.latitude.toFixed(4)}, ${s.longitude.toFixed(4)})
+              <a href="${url}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="font-size: 12px; padding: 5px 12px;">
+                📍 الخريطة (${s.latitude.toFixed(4)}, ${s.longitude.toFixed(4)})
               </a>
             `;
           }
           return `
-            <div style="padding: 12px 16px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="padding: 12px 14px; background: var(--btn-sec-bg); border: 1px solid var(--card-border); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
               <div>
-                <div style="font-weight: 700; font-size: 14px;">مسح بواسطة زائر</div>
+                <div style="font-weight: 600; font-size: 13.5px;">مسح رمز QR</div>
                 <div style="font-size: 12px; color: var(--text-muted);">${new Date(s.created_at).toLocaleString('ar-EG')}</div>
               </div>
               <div>${mapHtml}</div>
@@ -802,7 +897,7 @@ async function viewScans(itemId, itemName) {
       </div>
     `;
   } catch (err) {
-    content.innerHTML = '<div style="color: #ef4444;">فشل في جلب السجل</div>';
+    content.innerHTML = '<div style="color: #f87171;">فشل في جلب السجل</div>';
   }
 }
 function closeScansModal() {
@@ -811,7 +906,7 @@ function closeScansModal() {
 
 function copyScanLink(url) {
   navigator.clipboard.writeText(url).then(() => {
-    showToast('تم نسخ رابط المسح إلى الحافظة!', 'success');
+    showToast('تم نسخ رابط المسح بنجاح', 'success');
   });
 }
 
@@ -830,7 +925,12 @@ async function handleLogout() {
 
 function escapeHtml(str) {
   if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function formatTime(iso) {

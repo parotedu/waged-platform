@@ -3,24 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>استوديو طباعة الملصقات | منصة واجد</title>
+  <title>استوديو طباعة الملصقات — واجد</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
   <link rel="stylesheet" href="/css/print.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-5 0h3v2h-3v-2zm2 3h3v3h-3v-3zm3 0h2v2h-2v-2zm0 3h2v2h-2v-2zm-5 0h3v2h-3v-2z'/></svg>">
 </head>
 <body>
 
-  <!-- Studio Controls (hidden when printing) -->
   <div class="print-controls">
     <div class="controls-top">
-      <div>
-        <h2 style="font-size: 20px; font-weight: 900; color: #0f172a; margin: 0 0 4px;">🖨️ استوديو طباعة ملصقات واجد</h2>
-        <p style="color: #64748b; font-size: 13px; margin: 0;">خصّص تصميم الملصق ولونه واطبعه بدقة Vector فائقة</p>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <img src="/logo.svg" alt="Waged" width="32" height="32">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 700; margin: 0 0 2px;">استوديو طباعة ملصقات واجد</h2>
+          <p style="color: #94a3b8; font-size: 12.5px; margin: 0;">صمّم واطبع ملصقك بدقة Vector عالية الوضوح</p>
+        </div>
       </div>
       <div style="display: flex; gap: 10px; align-items: center;">
-        <button onclick="window.print()" style="background: #2563eb; color: #fff; border: none; padding: 10px 22px; border-radius: 10px; font-weight: 800; font-family: inherit; cursor: pointer; font-size: 14px;">
+        <button onclick="window.print()" style="background: linear-gradient(135deg, #8b5cf6, #ec4899, #3b82f6); color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 13.5px;">
           🖨️ طباعة / حفظ PDF
         </button>
-        <a href="/dashboard.html" style="color: #475569; font-size: 13px; font-weight: 700; text-decoration: none; padding: 9px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px;">
+        <a href="/dashboard.html" style="color: #cbd5e1; font-size: 13px; font-weight: 600; text-decoration: none; padding: 9px 14px; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px;">
           ← لوحة التحكم
         </a>
       </div>
@@ -28,20 +30,20 @@
 
     <div class="controls-grid">
       <div class="control-field">
-        <label>نوع القالب (Label Type)</label>
+        <label>نوع القالب</label>
         <select id="stickerType" onchange="renderStickers()">
-          <option value="car">🚗 ملصق زجاج السيارة (الركنة والطوارئ)</option>
-          <option value="device">💻 ملصق لابتوب وأجهزة إلكترونية</option>
-          <option value="bag">💼 بطاقة حقائب وأمتعة السفر</option>
-          <option value="mini">🏷️ ملصق مصغر (مفاتيح / مقتنيات)</option>
+          <option value="car">🚗 ملصق زجاج السيارة</option>
+          <option value="device">💻 ملصق لابتوب وأجهزة</option>
+          <option value="bag">💼 بطاقة حقائب وأمتعة</option>
+          <option value="mini">🏷️ ملصق مصغر للمفاتيح</option>
         </select>
       </div>
 
       <div class="control-field">
-        <label>لون التصميم (Theme)</label>
+        <label>الهوية اللونية</label>
         <select id="stickerTheme" onchange="renderStickers()">
-          <option value="blue">🔵 أزرق واجد الرسمي</option>
-          <option value="dark">⚫ أسود فخم (Executive)</option>
+          <option value="parot">🟣 هوية واجد (Parot Midnight)</option>
+          <option value="dark">⚫ أسود رسمي</option>
           <option value="amber">🟡 تحذيري (أصفر / أسود)</option>
           <option value="emerald">🟢 أخضر أمان</option>
         </select>
@@ -58,18 +60,17 @@
       </div>
 
       <div class="control-field">
-        <label>إظهار اسم الغرض على الملصق</label>
+        <label>إظهار اسم الغرض</label>
         <select id="showItemName" onchange="renderStickers()">
           <option value="yes" selected>نعم، إظهار الاسم</option>
-          <option value="no">لا، إخفاء الاسم للخصوصية</option>
+          <option value="no">لا، إخفاء للخصوصية</option>
         </select>
       </div>
     </div>
   </div>
 
-  <!-- Sheet Container for Printable Cards -->
   <div class="sheet-container" id="sheetContainer">
-    <div style="text-align: center; padding: 50px; color: #64748b;">جاري تحضير استوديو الطباعة...</div>
+    <div style="text-align: center; padding: 50px; color: #94a3b8;">جاري تحضير استوديو الطباعة...</div>
   </div>
 
   <script>
@@ -79,7 +80,7 @@
 
     async function loadItemData() {
       if (!code) {
-        document.getElementById('sheetContainer').innerHTML = '<div style="color: #dc2626; text-align: center; font-weight: 700;">رمز الكود غير محدد في الرابط</div>';
+        document.getElementById('sheetContainer').innerHTML = '<div style="color: #f87171; text-align: center; font-weight: 700;">رمز الكود غير محدد في الرابط</div>';
         return;
       }
 
@@ -88,7 +89,6 @@
         if (!res.ok) throw new Error('فشل في جلب بيانات الكود أو تم حذفه');
         itemData = await res.json();
 
-        // Auto-select matching template based on item category
         const catMap = { car: 'car', laptop: 'device', bag: 'bag', keys: 'mini', pet: 'mini' };
         if (catMap[itemData.category]) {
           document.getElementById('stickerType').value = catMap[itemData.category];
@@ -96,8 +96,7 @@
 
         renderStickers();
       } catch (err) {
-        console.error(err);
-        document.getElementById('sheetContainer').innerHTML = `<div style="color: #dc2626; text-align: center; font-weight: 700;">${escapeHtml(err.message)}</div>`;
+        document.getElementById('sheetContainer').innerHTML = `<div style="color: #f87171; text-align: center; font-weight: 700;">${escapeHtml(err.message)}</div>`;
       }
     }
 
@@ -110,7 +109,11 @@
       const showName = document.getElementById('showItemName').value === 'yes';
       const container = document.getElementById('sheetContainer');
 
-      container.className = type === 'mini' ? 'sheet-container mini-grid' : 'sheet-container';
+      if (count === 1) {
+        container.className = 'sheet-container single-grid';
+      } else {
+        container.className = type === 'mini' ? 'sheet-container mini-grid' : 'sheet-container';
+      }
 
       let instruction = '';
       let tagTitle = '';
@@ -134,7 +137,6 @@
         subnote = 'محادثة فورية مشفرة';
       }
 
-      // Crisp local SVG QR generated by Waged server
       const qrSrc = `/api/scan/qr/${encodeURIComponent(code)}`;
       const hostLabel = window.location.host;
 
@@ -144,8 +146,9 @@
           <div class="sticker-card theme-${theme} ${type === 'mini' ? 'layout-mini' : ''}">
             <div class="sticker-top-bar">
               <div class="sticker-brand">
+                <img src="/logo.svg" alt="Waged" width="22" height="22">
                 <span>واجد</span>
-                <small style="font-size: 10px; opacity: 0.8;">WAGED</small>
+                <small style="font-size: 10px; opacity: 0.75; font-family: Outfit, sans-serif;">WAGED</small>
               </div>
               <div class="sticker-tag">${tagTitle}</div>
             </div>
@@ -161,7 +164,7 @@
 
             <div class="sticker-footer">
               <span>🛡️ خصوصية 100%</span>
-              <span>${escapeHtml(hostLabel)}</span>
+              <span style="font-family: Outfit, sans-serif;">${escapeHtml(hostLabel)}</span>
             </div>
             <span class="cut-hint">✂️ قص على الحدود المنقطة</span>
           </div>
@@ -173,7 +176,12 @@
 
     function escapeHtml(str) {
       if (!str) return '';
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     loadItemData();

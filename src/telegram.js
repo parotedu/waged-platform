@@ -1,19 +1,29 @@
 const db = require('./db');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || 'WagedBot';
+const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || '';
+let pollingActive = false;
+let lastUpdateId = 0;
+
+function escapeTgHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
 async function sendTelegramMessage(chatId, text, replyMarkup = null) {
   if (!BOT_TOKEN) {
-    console.log(`[Telegram Simulation] Target ${chatId}: ${text}`);
-    return { success: false, reason: 'TELEGRAM_BOT_TOKEN not configured' };
+    console.log(`[Telegram Simulation] Target ${chatId}: ${text.replace(/<[^>]+>/g, '')}`);
+    return { success: false, simulated: true, reason: 'TELEGRAM_BOT_TOKEN not configured' };
   }
 
   try {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
     const payload = {
       chat_id: chatId,
-      text: text,
+      text,
       parse_mode: 'HTML',
       disable_web_page_preview: false
     };
@@ -25,15 +35,117 @@ async function sendTelegramMessage(chatId, text, replyMarkup = null) {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000)
     });
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (err) {
     console.error('Error sending Telegram notification:', err.message);
     return { success: false, error: err.message };
   }
+}
+
+/**
+ * Handle incoming Telegram bot update (webhook or polling)
+ * Supports `/start <telegram_link_token>` for 1-click account linking.
+ */
+async function handleTelegramUpdate(update) {
+  try {
+    const msg = update && update.message;
+    if (!msg || !msg.text || !msg.chat) return;
+
+    const text = msg.text.trim();
+    const chatId = String(msg.chat.id);
+
+    if (text.startsWith('/start')) {
+      const parts = text.split(/\s+/);
+      const token = parts[1];
+
+      if (!token) {
+        await sendTelegramMessage(
+          chatId,
+          `👋 أهلاً بك في بوت <b>منصة واجد (Waged)</b>!\n\nلربط حسابك تلقائياً، افتح لوحة التحكم في منصة واجد واضغط على زر <b>ربط تليجرام التلقائي</b>، أو استخدم معرفك الرقمي التالي للربط اليدوي:\n\n<code>${chatId}</code>`
+        );
+        return;
+      }
+
+      const user = db.prepare('SELECT id, name FROM users WHERE telegram_link_token = ?').get(token);
+      if (!user) {
+        await sendTelegramMessage(
+          chatId,
+          '⚠️ رمز الربط غير صالح أو منتهي الصلاحية. يرجى العودة إلى لوحة التحكم وإعادة المحاولة.'
+        );
+        return;
+      }
+
+      db.prepare('UPDATE users SET telegram_chat_id = ? WHERE id = ?').run(chatId, user.id);
+
+      await sendTelegramMessage(
+        chatId,
+        `✅ <b>تم ربط حسابك بنجاح يا ${escapeTgHtml(user.name)}!</b>\n\nستصلك من الآن تنبيهات فورية بالموقع الجغرافي ورابط المحادثة المباشرة بمجرد أن يمسح أي شخص أحد رموز واجد الخاصة بك.`
+      );
+    }
+  } catch (err) {
+    console.error('Telegram update error:', err.message);
+  }
+}
+
+/**
+ * Register Telegram webhook (when deployed on Render with public HTTPS URL)
+ */
+async function setupTelegramWebhook(appUrl) {
+  if (!BOT_TOKEN || !appUrl || !appUrl.startsWith('https://')) return;
+  try {
+    const webhookUrl = `${appUrl.replace(/\/$/, '')}/api/telegram/webhook`;
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: webhookUrl, allowed_updates: ['message'] })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      console.log(`✈️ Telegram Webhook registered: ${webhookUrl}`);
+    }
+  } catch (err) {
+    console.warn('Failed to register Telegram webhook:', err.message);
+  }
+}
+
+/**
+ * Optional local polling when TELEGRAM_BOT_TOKEN is set without public HTTPS
+ */
+function startTelegramPolling() {
+  if (!BOT_TOKEN || pollingActive) return;
+  pollingActive = true;
+
+  const poll = async () => {
+    if (!pollingActive) return;
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=25`,
+        { signal: AbortSignal.timeout(30000) }
+      );
+      const data = await res.json();
+      if (data.ok && Array.isArray(data.result)) {
+        for (const upd of data.result) {
+          lastUpdateId = Math.max(lastUpdateId, upd.update_id);
+          await handleTelegramUpdate(upd);
+        }
+      }
+    } catch (err) {
+      // Ignore transient network timeouts and continue
+    }
+    if (pollingActive) {
+      setTimeout(poll, 1000);
+    }
+  };
+
+  poll();
+}
+
+function stopTelegramPolling() {
+  pollingActive = false;
 }
 
 // Notify owner about QR scan & location
@@ -41,28 +153,25 @@ async function notifyOwnerScan(userId, itemName, lat, lng, chatUrl) {
   const user = db.prepare('SELECT telegram_chat_id, name FROM users WHERE id = ?').get(userId);
   if (!user || !user.telegram_chat_id) return;
 
-  let locationText = 'غير محدد';
+  const safeName = escapeTgHtml(itemName);
+  let locationText = 'لم يتم مشاركته';
   let mapsUrl = '';
   if (lat && lng) {
     mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-    locationText = `<a href="${mapsUrl}">اضغط هنا لفتح الخريطة 📍</a>`;
+    locationText = `<a href="${mapsUrl}">عرض الموقع على الخريطة 📍</a>`;
   }
 
-  const message = `🚨 <b>تنبيه من منصة واجد!</b>
+  const message = `🚨 <b>تنبيه مسح جديد — منصة واجد</b>
 
-قام شخص للتو بمسح رمز QR الخاص بـ:
-<b>📦 الغرض:</b> ${itemName}
+<b>📦 الغرض:</b> ${safeName}
 <b>📍 الموقع الجغرافي:</b> ${locationText}
 <b>⏱ التوقيت:</b> ${new Date().toLocaleTimeString('ar-EG')}
 
-💬 يمكنك الآن التواصل معه بأمان وبسرية تامة دون كشف رقمك:
-<a href="${chatUrl}">👉 اضغط هنا لفتح المحادثة الفورية</a>`;
+<a href="${chatUrl}">💬 اضغط هنا لفتح المحادثة الفورية والرد بأمان</a>`;
 
   const inlineKeyboard = {
     inline_keyboard: [
-      [
-        { text: '💬 فتح الشات المباشر', url: chatUrl }
-      ]
+      [{ text: '💬 فتح المحادثة الفورية', url: chatUrl }]
     ]
   };
 
@@ -78,18 +187,19 @@ async function notifyOwnerMessage(userId, itemName, messageSnippet, chatUrl) {
   const user = db.prepare('SELECT telegram_chat_id, name FROM users WHERE id = ?').get(userId);
   if (!user || !user.telegram_chat_id) return;
 
-  const message = `💬 <b>رسالة جديدة على منصة واجد</b>
+  const safeName = escapeTgHtml(itemName);
+  const safeSnippet = escapeTgHtml(messageSnippet.slice(0, 300));
 
-<b>📦 الغرض:</b> ${itemName}
-<b>📩 نص الرسالة:</b>
-<i>"${messageSnippet}"</i>
+  const message = `💬 <b>رسالة جديدة — منصة واجد</b>
 
-<a href="${chatUrl}">👉 اضغط هنا للرد على الشخص</a>`;
+<b>📦 الغرض:</b> ${safeName}
+<b>📩 الرسالة:</b>
+<i>"${safeSnippet}"</i>
+
+<a href="${chatUrl}">👉 اضغط هنا للرد المباشر</a>`;
 
   return sendTelegramMessage(user.telegram_chat_id, message, {
-    inline_keyboard: [
-      [{ text: '💬 الرد المباشر', url: chatUrl }]
-    ]
+    inline_keyboard: [[{ text: '💬 الرد المباشر', url: chatUrl }]]
   });
 }
 
@@ -97,6 +207,10 @@ module.exports = {
   BOT_TOKEN,
   BOT_USERNAME,
   sendTelegramMessage,
+  handleTelegramUpdate,
+  setupTelegramWebhook,
+  startTelegramPolling,
+  stopTelegramPolling,
   notifyOwnerScan,
   notifyOwnerMessage
 };

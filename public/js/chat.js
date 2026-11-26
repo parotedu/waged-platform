@@ -22,8 +22,7 @@ function showToast(msg, type = 'info') {
 document.addEventListener('DOMContentLoaded', async () => {
   if (!publicCode) {
     document.getElementById('itemHeaderTitle').textContent = 'رمز غير صالح';
-    document.getElementById('chatMessages').innerHTML = '<div style="color: #dc2626; text-align: center; margin: auto;">لم يتم تحديد رمز QR صالح.</div>';
-    document.getElementById('chatForm').style.display = 'none';
+    document.getElementById('chatMessages').innerHTML = '<div style="color: #f87171; text-align: center; margin: auto;">لم يتم تحديد رمز QR صالح.</div>';
     return;
   }
 
@@ -70,15 +69,22 @@ async function fetchItemInfo() {
 
     const hasPromptedLocation = sessionStorage.getItem(`geo_prompted_${publicCode}`);
     if (itemInfo.require_location && !hasPromptedLocation) {
+      document.getElementById('chatMessages').style.display = 'none';
       document.getElementById('geoStep').style.display = 'block';
     } else {
       await recordScanAndStartChat();
     }
   } catch (err) {
     document.getElementById('itemHeaderTitle').textContent = 'تنبيه';
-    document.getElementById('chatMessages').innerHTML = `<div style="color: #ef4444; text-align: center; margin: auto;">${escapeHtml(err.message)}</div>`;
-    document.getElementById('chatForm').style.display = 'none';
+    document.getElementById('chatMessages').innerHTML = `<div style="color: #f87171; text-align: center; margin: auto;">${escapeHtml(err.message)}</div>`;
   }
+}
+
+function revealChatUI() {
+  document.getElementById('geoStep').style.display = 'none';
+  document.getElementById('chatMessages').style.display = 'flex';
+  document.getElementById('quickReplies').style.display = 'flex';
+  document.getElementById('chatForm').style.display = 'flex';
 }
 
 function renderQuickReplies(cat) {
@@ -139,13 +145,11 @@ async function grantLocation() {
         accuracy: pos.coords.accuracy
       };
       sessionStorage.setItem(`geo_prompted_${publicCode}`, '1');
-      document.getElementById('geoStep').style.display = 'none';
       document.getElementById('locationBadge').style.display = 'inline';
       await recordScanAndStartChat();
     },
     () => {
       sessionStorage.setItem(`geo_prompted_${publicCode}`, '1');
-      document.getElementById('geoStep').style.display = 'none';
       recordScanAndStartChat();
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -154,7 +158,6 @@ async function grantLocation() {
 
 function skipLocation() {
   sessionStorage.setItem(`geo_prompted_${publicCode}`, '1');
-  document.getElementById('geoStep').style.display = 'none';
   recordScanAndStartChat();
 }
 
@@ -190,6 +193,7 @@ async function sendLiveLocationPin() {
 }
 
 async function recordScanAndStartChat() {
+  revealChatUI();
   try {
     const payload = {
       code: publicCode,
@@ -291,8 +295,8 @@ function appendChatMessage(msg, autoScroll = true) {
     locationHtml = `
       <div class="msg-location-card">
         📍 <strong>موقع المسح:</strong>
-        <a href="${mapUrl}" target="_blank" style="color: #2563eb; text-decoration: underline; margin-right: 6px;">
-          عرض على الخريطة
+        <a href="${mapUrl}" target="_blank" rel="noopener" style="color: #93c5fd; text-decoration: underline; margin-right: 6px;">
+          فتح الخريطة
         </a>
       </div>
     `;
@@ -344,7 +348,12 @@ async function handleSendMessage(e) {
 
 function escapeHtml(str) {
   if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function formatTime(iso) {

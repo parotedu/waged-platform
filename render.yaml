@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: waged-platform
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+    # To persist SQLite data across redeploys on Render Starter+ plan,
+    # change plan above to 'starter' and uncomment the following block:
+    # disk:
+    #   name: waged-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
+    # And add env var: DATA_DIR=/var/data

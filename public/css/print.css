@@ -1,16 +1,15 @@
-/* Print Studio Styling for Waged QR Stickers */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Outfit:wght@500;700&display=swap');
 
 :root {
-  --sticker-accent: #2563eb;
-  --sticker-bg-soft: #eff6ff;
+  --sticker-accent: #8b5cf6;
   --sticker-header-bg: #0f172a;
 }
 
 body {
-  font-family: 'Cairo', sans-serif;
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
   direction: rtl;
-  background: #f1f5f9;
+  background: #090d16;
+  color: #f8fafc;
   margin: 0;
   padding: 20px;
 }
@@ -18,10 +17,12 @@ body {
 .print-controls {
   max-width: 960px;
   margin: 0 auto 28px;
-  background: #ffffff;
+  background: rgba(17, 24, 39, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(18px);
   padding: 22px 26px;
-  border-radius: 18px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.45);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -39,45 +40,60 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e2e8f0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .control-field label {
   display: block;
   font-size: 12px;
-  font-weight: 700;
-  color: #475569;
-  margin-bottom: 4px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 5px;
 }
 
-.control-field select,
-.control-field input {
+.control-field select {
   width: 100%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1.5px solid #cbd5e1;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0b1120;
+  color: #f8fafc;
   font-family: inherit;
   font-size: 13px;
   box-sizing: border-box;
 }
 
 .sheet-container {
-  max-width: 960px;
+  max-width: 820px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.sheet-container.single-grid {
+  max-width: 420px;
+  grid-template-columns: 1fr;
 }
 
 .sheet-container.mini-grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  max-width: 820px;
+  grid-template-columns: repeat(3, 1fr);
 }
 
-/* Individual Printable Sticker Card */
+@media (max-width: 680px) {
+  .sheet-container,
+  .sheet-container.mini-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Individual Printable Sticker Card (Always crisp high-contrast for paper printing) */
 .sticker-card {
   background: #ffffff;
-  border: 2px dashed #94a3b8;
+  color: #0f172a;
+  border: 2px dashed #64748b;
   border-radius: 18px;
   padding: 18px;
   text-align: center;
@@ -87,7 +103,7 @@ body {
   overflow: hidden;
 }
 
-.sticker-card.theme-blue { --sticker-accent: #2563eb; --sticker-header-bg: #1e3a8a; }
+.sticker-card.theme-parot { --sticker-accent: #8b5cf6; --sticker-header-bg: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); }
 .sticker-card.theme-dark { --sticker-accent: #0f172a; --sticker-header-bg: #0f172a; }
 .sticker-card.theme-amber { --sticker-accent: #d97706; --sticker-header-bg: #18181b; }
 .sticker-card.theme-emerald { --sticker-accent: #059669; --sticker-header-bg: #064e3b; }
@@ -106,22 +122,22 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 17px;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .sticker-tag {
-  background: rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.16);
   color: #ffffff;
   padding: 3px 10px;
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sticker-item-name {
-  font-size: 17px;
-  font-weight: 800;
+  font-size: 16.5px;
+  font-weight: 700;
   color: var(--sticker-accent);
   margin-bottom: 10px;
 }
@@ -135,8 +151,8 @@ body {
 }
 
 .sticker-qr-frame img {
-  width: 180px;
-  height: 180px;
+  width: 178px;
+  height: 178px;
   display: block;
 }
 
@@ -147,9 +163,9 @@ body {
 
 .sticker-instruction {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: #1e293b;
-  margin: 12px 0 6px;
+  margin: 12px 0 5px;
   line-height: 1.45;
 }
 
@@ -167,7 +183,7 @@ body {
   align-items: center;
   font-size: 10px;
   color: #475569;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .cut-hint {

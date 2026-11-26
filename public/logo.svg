@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <linearGradient id="wagedGrad" x1="10" y1="6" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="52%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <!-- Subtle monoline QR viewfinder brackets flanking the pin -->
+  <path
+    d="M8 18 V12 C8 9.8 9.8 8 12 8 H18 M46 8 H52 C54.2 8 56 9.8 56 12 V18"
+    stroke="url(#wagedGrad)"
+    stroke-width="3.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.72"
+  />
+  <!-- Evolved Monoline Location Pin in Parot signature gradient -->
+  <path
+    d="M32 57 C32 57 50 40 50 26 C50 15.5 41.9 7 32 7 C22.1 7 14 15.5 14 26 C14 36 23.2 47.2 28.6 53.1"
+    stroke="url(#wagedGrad)"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <!-- Rounded QR Finder Frame inside the pin head -->
+  <path
+    d="M35.5 19 H29 C26.8 19 25 20.8 25 23 V29 C25 31.2 26.8 33 29 33 H35 C37.2 33 39 31.2 39 29 V24.5"
+    stroke="url(#wagedGrad)"
+    stroke-width="3.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <!-- Center Finder Node -->
+  <circle cx="32" cy="26" r="2.8" fill="url(#wagedGrad)" />
+</svg>

@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db');
-const { requireAuth, verifyToken } = require('../auth');
+const { requireAuth, verifyToken, getBaseUrl } = require('../auth');
 const { notifyOwnerMessage } = require('../telegram');
 
 const router = express.Router();
@@ -16,7 +16,6 @@ function verifyChatAccess(req, chatId, sessionId) {
 
   if (!chat) return null;
 
-  // Check if owner
   const token = req.cookies.token || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
   if (token) {
     const user = verifyToken(token);
@@ -25,7 +24,6 @@ function verifyChatAccess(req, chatId, sessionId) {
     }
   }
 
-  // Check if scanner with matching sessionId
   if (sessionId && chat.session_id === sessionId) {
     return { chat, role: 'scanner' };
   }
@@ -33,7 +31,7 @@ function verifyChatAccess(req, chatId, sessionId) {
   return null;
 }
 
-// Get messages for a chat
+// Get messages for a chat (plus latest scan coordinates)
 router.get('/:chatId/messages', (req, res) => {
   try {
     const chatId = req.params.chatId;
@@ -55,9 +53,17 @@ router.get('/:chatId/messages', (req, res) => {
       ORDER BY id ASC
     `).all(chatId);
 
+    const lastScan = db.prepare(`
+      SELECT latitude, longitude
+      FROM scans
+      WHERE item_id = ? AND session_id = ? AND latitude IS NOT NULL AND longitude IS NOT NULL
+      ORDER BY id DESC LIMIT 1
+    `).get(access.chat.item_id, access.chat.session_id);
+
     res.json({
       role: access.role,
       itemName: access.chat.item_name,
+      scanLocation: lastScan ? { lat: lastScan.latitude, lng: lastScan.longitude } : null,
       messages
     });
   } catch (err) {
@@ -86,7 +92,7 @@ router.post('/:chatId/messages', async (req, res) => {
     }
 
     const cleanMsg = message.trim();
-    const senderType = access.role; // 'scanner' or 'owner'
+    const senderType = access.role;
 
     const stmt = db.prepare(`
       INSERT INTO messages (chat_id, sender_type, message, lat, lng)
@@ -119,11 +125,8 @@ router.post('/:chatId/messages', async (req, res) => {
       }
     }
 
-    // If scanner sent it, notify owner via Telegram
     if (senderType === 'scanner') {
-      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-      const host = req.get('host');
-      const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+      const baseUrl = getBaseUrl(req);
       const ownerChatUrl = `${baseUrl}/dashboard.html?openChat=${chatId}`;
       notifyOwnerMessage(access.chat.owner_id, access.chat.item_name, cleanMsg, ownerChatUrl).catch(console.error);
     }
@@ -132,6 +135,27 @@ router.post('/:chatId/messages', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'حدث خطأ أثناء إرسال الرسالة' });
+  }
+});
+
+// Owner: Delete a conversation
+router.delete('/:chatId', requireAuth, (req, res) => {
+  try {
+    const chat = db.prepare(`
+      SELECT c.id FROM chats c
+      JOIN items i ON c.item_id = i.id
+      WHERE c.id = ? AND i.user_id = ?
+    `).get(req.params.chatId, req.user.id);
+
+    if (!chat) {
+      return res.status(404).json({ error: 'المحادثة غير موجودة' });
+    }
+
+    db.prepare('DELETE FROM chats WHERE id = ?').run(chat.id);
+    res.json({ success: true, message: 'تم حذف المحادثة بنجاح' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'حدث خطأ أثناء حذف المحادثة' });
   }
 });
 

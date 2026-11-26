@@ -8,11 +8,14 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 
+const db = require('./src/db');
 const authRoutes = require('./src/routes/authRoutes');
 const itemRoutes = require('./src/routes/itemRoutes');
 const scanRoutes = require('./src/routes/scanRoutes');
 const chatRoutes = require('./src/routes/chatRoutes');
 const subscriptionRoutes = require('./src/routes/subscriptionRoutes');
+const telegramRoutes = require('./src/routes/telegramRoutes');
+const { BOT_TOKEN, setupTelegramWebhook, startTelegramPolling, stopTelegramPolling } = require('./src/telegram');
 const setupSocket = require('./src/socket');
 
 const app = express();
@@ -56,7 +59,7 @@ app.use(cookieParser());
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
-// Global Rate Limiter to protect from DDoS & brute force
+// Rate Limiters
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 400,
@@ -80,21 +83,28 @@ app.use('/api/items', itemRoutes);
 app.use('/api/scan', scanRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/telegram', telegramRoutes);
 
-// Health check
+// Health check (verifies SQLite readiness for Render)
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    platform: 'Waged (منصة واجد)',
-    version: '2.0.0',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    db.prepare('SELECT 1').get();
+    res.json({
+      status: 'ok',
+      db: 'connected',
+      platform: 'Waged by Parot',
+      version: '2.1.0',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(503).json({ status: 'error', db: 'disconnected' });
+  }
 });
 
 // Serve frontend static assets
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Fallback to index.html for non-API client navigation
+// Fallback to index.html for non-API GET requests
 app.use((req, res) => {
   if (req.method === 'GET' && !req.path.startsWith('/api')) {
     return res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -104,8 +114,33 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
+  const publicUrl = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
   console.log(`===============================================`);
-  console.log(`🚀 منصة واجد (Waged Platform v2.0) تعمل الآن بنجاح!`);
-  console.log(`🌐 الرابط المحلي: http://localhost:${PORT}`);
+  console.log(`🚀 منصة واجد (Waged by Parot) تعمل الآن بنجاح!`);
+  console.log(`🌐 الرابط: ${publicUrl}`);
   console.log(`===============================================`);
+
+  if (BOT_TOKEN) {
+    if (publicUrl.startsWith('https://')) {
+      setupTelegramWebhook(publicUrl).catch(console.error);
+    } else if (process.env.TELEGRAM_POLLING !== 'false') {
+      startTelegramPolling();
+    }
+  }
 });
+
+// Graceful shutdown for Render & zero-downtime restarts
+function shutdown(signal) {
+  console.log(`\nReceived ${signal}, shutting down gracefully...`);
+  stopTelegramPolling();
+  server.close(() => {
+    try {
+      db.close();
+    } catch (e) {}
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 5000);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

@@ -1,14 +1,23 @@
 {
   "name": "waged",
-  "version": "1.0.0",
-  "description": "",
+  "version": "2.1.0",
+  "description": "Waged by Parot — Smart Anonymous QR Contact & Lost-and-Found Platform",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "test": "node test/verify.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "qr",
+    "privacy",
+    "lost-and-found",
+    "parot",
+    "waged"
+  ],
+  "author": "PAROT Corp",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -18,7 +27,7 @@
     "dotenv": "^18.0.9",
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.3",
-    "helmet": "^8.3.0",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.4",

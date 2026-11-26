@@ -2,11 +2,11 @@ const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
 const { requireAuth } = require('../auth');
-const { PLANS, getPlan } = require('../plans');
+const { PLANS, getEffectivePlan } = require('../plans');
 
 const router = express.Router();
 
-// Get all plans (public) + current user's subscription if authenticated
+// Get all plans (public)
 router.get('/plans', (req, res) => {
   res.json({ plans: Object.values(PLANS) });
 });
@@ -21,7 +21,7 @@ router.get('/me', requireAuth, (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
 
-    const plan = getPlan(user.plan_id);
+    const plan = getEffectivePlan(user);
     const itemCount = db.prepare('SELECT COUNT(*) as cnt FROM items WHERE user_id = ?').get(req.user.id).cnt;
     const invoices = db.prepare(`
       SELECT id, plan_id, amount, currency, billing_cycle, status, reference_code, created_at
@@ -60,7 +60,7 @@ router.post('/subscribe', requireAuth, (req, res) => {
 
     let amount = billingCycle === 'yearly' ? targetPlan.priceYearly : targetPlan.priceMonthly;
     if (promoCode && promoCode.trim().toUpperCase() === 'PAROT100' && amount > 0) {
-      amount = 0; // Promo discount
+      amount = 0;
     }
 
     const durationDays = billingCycle === 'yearly' ? 365 : 30;
@@ -104,8 +104,8 @@ router.post('/subscribe', requireAuth, (req, res) => {
 router.post('/webhook', requireAuth, (req, res) => {
   try {
     const { webhookUrl } = req.body;
-    const user = db.prepare('SELECT plan_id FROM users WHERE id = ?').get(req.user.id);
-    const plan = getPlan(user?.plan_id);
+    const user = db.prepare('SELECT plan_id, subscription_status, subscription_expires_at FROM users WHERE id = ?').get(req.user.id);
+    const plan = getEffectivePlan(user);
 
     if (!plan.capabilities.webhookAlerts) {
       return res.status(403).json({ error: 'ميزة الـ Webhook متاحة فقط في الباقة الاحترافية وباقة الأعمال' });

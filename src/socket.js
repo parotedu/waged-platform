@@ -1,5 +1,5 @@
 const db = require('./db');
-const { verifyToken } = require('./auth');
+const { verifyToken, getBaseUrl } = require('./auth');
 const { notifyOwnerMessage } = require('./telegram');
 
 function parseCookies(cookieHeader) {
@@ -20,7 +20,6 @@ function setupSocket(io) {
   io.on('connection', (socket) => {
     let currentRoom = null;
 
-    // Extract httpOnly JWT from handshake cookies if present
     const cookies = parseCookies(socket.handshake.headers.cookie);
     const handshakeToken = cookies.token || socket.handshake.auth?.token;
     const handshakeUser = handshakeToken ? verifyToken(handshakeToken) : null;
@@ -82,7 +81,6 @@ function setupSocket(io) {
       const { chatId, message, lat, lng } = data || {};
       if (!chatId || !message || !message.trim()) return;
 
-      // Strict authorization check: must match joined chatId
       if (Number(socket.chatId) !== Number(chatId)) {
         return socket.emit('error', 'غير مصرح بإرسال رسالة لهذه الغرفة');
       }
@@ -118,7 +116,7 @@ function setupSocket(io) {
 
         if (role === 'scanner' && socket.ownerId) {
           io.to(`owner_${socket.ownerId}`).emit('owner_new_message', newMsg);
-          const baseUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 4000}`;
+          const baseUrl = getBaseUrl();
           notifyOwnerMessage(socket.ownerId, socket.itemName, cleanText, `${baseUrl}/dashboard.html?openChat=${chatId}`).catch(console.error);
         }
       } catch (err) {

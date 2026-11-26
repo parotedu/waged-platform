@@ -3,167 +3,227 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>منصة واجد | Waged - تواصل ذكي وآمن عبر رموز QR</title>
+  <meta name="theme-color" content="#8b5cf6">
+  <title>واجد | Waged by Parot — تواصل ذكي وآمن عبر رموز QR</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <link rel="apple-touch-icon" href="/logo.svg">
+  <script src="/js/theme.js"></script>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-5 0h3v2h-3v-2zm2 3h3v3h-3v-3zm3 0h2v2h-2v-2zm0 3h2v2h-2v-2zm-5 0h3v2h-3v-2z'/></svg>">
 </head>
 <body>
+
+  <div class="ambient-bg">
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+    <div class="ambient-orb orb-3"></div>
+  </div>
 
   <!-- Navigation -->
   <nav class="navbar">
     <div class="container nav-container">
       <a href="/" class="logo">
-        <div class="logo-badge">W</div>
-        <span>واجد <small style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Waged</small></span>
+        <div class="logo-icon-wrap">
+          <img src="/logo.svg" alt="Waged Logo">
+        </div>
+        <span>واجد <small class="mono brand-gradient-text" style="font-size: 13px; margin-right: 4px;">Waged</small></span>
       </a>
-      <div class="nav-links" style="display: flex; align-items: center; gap: 22px;">
-        <a href="#how-it-works" class="nav-link">المميزات</a>
-        <a href="#pricing" class="nav-link">الباقات والأسعار</a>
-        <div id="navAuthLinks" style="display: flex; align-items: center; gap: 12px;">
-          <a href="/login.html" class="nav-link">تسجيل الدخول</a>
+
+      <div class="nav-links">
+        <a href="#pillars" class="nav-link nav-hide-mobile">المميزات</a>
+        <a href="#pricing" class="nav-link nav-hide-mobile">الباقات</a>
+        <button type="button" class="icon-btn theme-toggle-btn" onclick="toggleWagedTheme()" aria-label="تغيير المظهر">☀️</button>
+        <div id="navAuthLinks" style="display: flex; align-items: center; gap: 10px;">
+          <a href="/login.html" class="nav-link">دخول</a>
           <a href="/login.html?tab=signup" class="btn btn-primary btn-sm">ابدأ مجاناً</a>
         </div>
       </div>
     </div>
   </nav>
 
-  <!-- Hero Section -->
-  <header class="hero">
-    <div class="container">
-      <div class="hero-pill">
-        🛡️ خصوصية مشفرة 100% — تواصل فوري بدون كشف رقم هاتفك
+  <!-- Split Hero -->
+  <header class="hero-section">
+    <div class="container hero-grid">
+      <div>
+        <a href="https://parotcorp.com" target="_blank" rel="noopener" class="powered-by-pill" style="margin-bottom: 14px;">
+          <span>أحد منتجات <strong class="brand-gradient-text">PAROT</strong> • خصوصية 100%</span>
+        </a>
+        <h1 class="hero-title">
+          تواصل فوري يحفظ خصوصيتك<br>
+          <span class="brand-gradient-text">عبر رموز QR الذكية</span>
+        </h1>
+        <p class="hero-desc">
+          بدل ترك رقم هاتفك على زجاج السيارة أو أجهزتك الشخصية، الصق رمز واجد. عند أي طارئ أو فقدان غرض، يمسح الشخص الكود ليرسل موقعه الجغرافي ويراسلك فوراً دون كشف هوية أي طرف.
+        </p>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <a href="/login.html?tab=signup" class="btn btn-primary" style="padding: 13px 28px; font-size: 15px;">
+            أنشئ رمزك الأول مجاناً
+          </a>
+          <a href="#pricing" class="btn btn-outline" style="padding: 13px 24px; font-size: 15px;">
+            عرض الباقات
+          </a>
+        </div>
       </div>
-      <h1 class="hero-title">
-        تواصل فوري وآمن عند الطوارئ<br>
-        <span>عبر رموز QR الذكية</span>
-      </h1>
-      <p class="hero-desc">
-        أنشئ واطبع رمز QR مخصص لسيارتك أو أجهزتك ومقتنياتك. عند أي طارئ أو ركنة سيارة أو فقدان غرضك، يمسح الشخص الرمز ليتواصل معك في محادثة فورية مشفرة مع إرسال موقعه الجغرافي دون كشف هوية أو رقم أي طرف.
-      </p>
-      <div class="hero-cta">
-        <a href="/login.html?tab=signup" class="btn btn-primary" style="padding: 14px 34px; font-size: 17px;">
-          🚀 أنشئ حسابك وابدأ الآن
-        </a>
-        <a href="#pricing" class="btn btn-outline" style="padding: 14px 28px; font-size: 17px;">
-          عرض الباقات والاشتراكات
-        </a>
+
+      <!-- Interactive Live Card Preview (No fake placeholder) -->
+      <div class="preview-phone">
+        <div class="preview-tabs">
+          <button type="button" class="preview-tab active" onclick="switchPreview('car', this)">🚗 ركنة سيارة</button>
+          <button type="button" class="preview-tab" onclick="switchPreview('laptop', this)">💻 جهاز مفقود</button>
+        </div>
+
+        <div id="previewBody" style="background: var(--chat-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--card-border);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div id="prevIcon" style="width: 38px; height: 38px; border-radius: 12px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 18px;">🚗</div>
+              <div>
+                <div id="prevTitle" style="font-weight: 700; font-size: 14px;">كيا سيراتو رمادي</div>
+                <div style="font-size: 11px; color: var(--accent);">● المالك متاح للتنبيه</div>
+              </div>
+            </div>
+            <img src="/logo.svg" alt="Waged" width="24" height="24">
+          </div>
+
+          <div style="margin: 14px 0; display: flex; flex-direction: column; gap: 10px;">
+            <div id="prevMsg1" class="msg-bubble msg-scanner" style="font-size: 13px;">
+              لو سمحت العربية مزنقة عليا ومحتاج أتحرك 🚗
+              <div class="msg-location-card">📍 تم إرفاق الموقع (30.0444, 31.2357)</div>
+            </div>
+            <div id="prevMsg2" class="msg-bubble msg-owner" style="font-size: 13px;">
+              أهلاً بحضرتك، وصلني التنبيه ونازل خلال دقيقة!
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted); padding-top: 8px; border-top: 1px solid var(--card-border);">
+            <span>🔒 محادثة مشفرة ومجهولة</span>
+            <span>✈️ إشعار تليجرام فوري</span>
+          </div>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- Features Grid -->
-  <section class="container" id="how-it-works">
-    <div style="text-align: center; margin-bottom: 16px;">
-      <span class="badge badge-primary">لماذا منصة واجد؟</span>
-      <h2 style="font-size: 32px; font-weight: 900; color: var(--dark); margin-top: 10px;">حلول متكاملة لحماية ممتلكاتك والتواصل الآمن</h2>
-    </div>
-
-    <div class="features-grid">
-      <div class="card feature-card">
-        <div class="feature-icon">🚗</div>
-        <h3 class="feature-title">حل أزمة ركنة السيارات</h3>
-        <p class="feature-text">
-          بدلاً من ترك رقم هاتفك مكشوفاً على زجاج السيارة، الصق ملصق واجد. أي شخص يمسح الرمز يراسلك فوراً برسالة سريعة وتصلك الإشارة في ثوانٍ.
+  <!-- 3 Focused Pillars -->
+  <section class="container" id="pillars">
+    <div class="pillars-grid">
+      <div class="card pillar-card">
+        <div class="pillar-icon">🛡️</div>
+        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">هوية محمية 100%</h3>
+        <p style="color: var(--text-muted); font-size: 14px;">
+          لا يظهر رقم هاتفك أو بريدك الإلكتروني أو اسمك الحقيقي لأي شخص يمسح الرمز.
         </p>
       </div>
 
-      <div class="card feature-card">
-        <div class="feature-icon">💼</div>
-        <h3 class="feature-title">استرجاع المقتنيات المفقودة</h3>
-        <p class="feature-text">
-          احمِ اللابتوب، الحقيبة، المحفظة أو المفاتيح. يمكنك تفعيل "وضع المفقودات" ليظهر تنبيه عاجل لمن يجد الغرض مع إرسال موقعه بدقة.
+      <div class="card pillar-card">
+        <div class="pillar-icon">📍</div>
+        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">موقع جغرافي وربط فوري</h3>
+        <p style="color: var(--text-muted); font-size: 14px;">
+          يلتقط إحداثيات المكان بموافقة الزائر ويرسل لك إشعاراً فورياً عبر تليجرام أو المتصفح مع رابط الخريطة.
         </p>
       </div>
 
-      <div class="card feature-card">
-        <div class="feature-icon">📍</div>
-        <h3 class="feature-title">التقاط الموقع الجغرافي (GPS)</h3>
-        <p class="feature-text">
-          بموافقة الشخص الذي يمسح الرمز، تلتقط المنصة الإحداثيات الجغرافية وترسل لك رابطاً مباشراً على خرائط Google Maps لتعرف مكان غرضك.
-        </p>
-      </div>
-
-      <div class="card feature-card">
-        <div class="feature-icon">🔔</div>
-        <h3 class="feature-title">تنبيهات تليجرام و Webhooks</h3>
-        <p class="feature-text">
-          اربط حسابك ببوت تليجرام أو بـ Webhook (للواتساب والأنظمة) ليصلك إشعار لحظي بالموقع ورابط الرد السريع فور مسح أي رمز.
-        </p>
-      </div>
-
-      <div class="card feature-card">
-        <div class="feature-icon">🔒</div>
-        <h3 class="feature-title">أمان وخصوصية Zero-PII</h3>
-        <p class="feature-text">
-          لا يتم مشاركة اسمك، رقم هاتفك، أو بريدك الإلكتروني مطلقاً. جميع الأكواد مولدة بتشفير عشوائي غير قابل للتخمين مع حماية ضد الهجمات.
-        </p>
-      </div>
-
-      <div class="card feature-card">
-        <div class="feature-icon">🖨️</div>
-        <h3 class="feature-title">استوديو طباعة الملصقات</h3>
-        <p class="feature-text">
-          صمّم واطبع ملصقات عالية الدقة (SVG/Vector) بأكثر من قالب ولون لتناسب زجاج السيارة، اللابتوب، الحقائب، أو الميداليات.
+      <div class="card pillar-card">
+        <div class="pillar-icon">🖨️</div>
+        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">ملصقات جاهزة للطباعة</h3>
+        <p style="color: var(--text-muted); font-size: 14px;">
+          استوديو طباعة مدمج يولد ملصقات Vector دقيقة للسيارات، اللابتوب، الحقائب، والمفاتيح.
         </p>
       </div>
     </div>
   </section>
 
-  <!-- Pricing & Subscriptions Section -->
-  <section class="container" id="pricing" style="margin: 70px auto;">
-    <div style="text-align: center; margin-bottom: 24px;">
-      <span class="badge badge-success">باقات مرنة للأفراد والشركات</span>
-      <h2 style="font-size: 34px; font-weight: 900; color: var(--dark); margin-top: 10px;">اختر الباقة المناسبة لاحتياجاتك</h2>
-      <p style="color: var(--text-muted); font-size: 16px; margin-top: 8px;">ابدأ مجاناً وقم بالترقية في أي وقت مع تفعيل فوري من لوحة التحكم</p>
-    </div>
-
-    <div class="pricing-grid" id="landingPricingGrid">
-      <!-- Populated cleanly from /api/subscriptions/plans -->
-    </div>
-  </section>
-
-  <!-- CTA Banner -->
-  <section class="container" style="margin: 40px auto 60px;">
-    <div class="card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; padding: 44px; border-radius: var(--radius-xl);">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 30px;">
-        <div style="max-width: 560px;">
-          <span class="badge" style="background: rgba(37,99,235,0.4); color: #93c5fd; margin-bottom: 14px;">جاهز للانطلاق</span>
-          <h2 style="font-size: 32px; font-weight: 800; margin-bottom: 14px;">احمِ سيارتك ومقتنياتك في أقل من دقيقة</h2>
-          <p style="color: #94a3b8; font-size: 16px; margin-bottom: 24px;">
-            سجّل حسابك المجاني، أنشئ رموز الـ QR الخاصة بك، واطبع ملصقاتك الاحترافية فوراً.
-          </p>
-          <a href="/login.html?tab=signup" class="btn btn-primary" style="padding: 13px 32px;">
-            أنشئ حسابك مجاناً الآن ⚡
-          </a>
-        </div>
-        <div style="background: rgba(255,255,255,0.06); padding: 24px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
-          <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 10px; font-weight: 700;">ملصق واجد الذكي</div>
-          <div style="background: #fff; padding: 14px; border-radius: 12px; display: inline-block;">
-            <svg width="140" height="140" viewBox="0 0 24 24" fill="#0f172a">
-              <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-5 0h3v2h-3v-2zm2 3h3v3h-3v-3zm3 0h2v2h-2v-2zm0 3h2v2h-2v-2zm-5 0h3v2h-3v-2z"/>
-            </svg>
-          </div>
-          <div style="margin-top: 10px; font-size: 12px; color: #38bdf8; font-weight: 700;">امسح للتواصل الآمن 🛡️</div>
-        </div>
+  <!-- Pricing & Subscriptions -->
+  <section class="container" id="pricing" style="margin: 56px auto;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+      <div>
+        <span class="badge badge-primary" style="margin-bottom: 8px;">الباقات والاشتراكات</span>
+        <h2 style="font-size: 30px; font-weight: 700;">اختر ما يناسب احتياجك</h2>
+      </div>
+      <div class="segmented-tabs" style="margin-bottom: 0;">
+        <button type="button" class="seg-btn active" id="landMonthlyBtn" onclick="setLandingCycle('monthly')">شهري</button>
+        <button type="button" class="seg-btn" id="landYearlyBtn" onclick="setLandingCycle('yearly')">سنوي (وفر 20%)</button>
       </div>
     </div>
+
+    <div class="pricing-grid" id="landingPricingGrid"></div>
   </section>
 
-  <!-- Footer -->
+  <!-- Minimal Footer -->
   <footer class="footer">
-    <div class="container">
-      <p style="font-weight: 800; color: var(--dark); margin-bottom: 6px;">منصة واجد (Waged) — أحد حلول PAROT Corp © 2026</p>
-      <p>منصة التواصل الفوري والآمن وحماية المقتنيات عبر رموز الاستجابة السريعة QR</p>
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <img src="/logo.svg" alt="Waged" width="22" height="22">
+        <span><strong>واجد (Waged)</strong> — أحد حلول <a href="https://parotcorp.com" target="_blank" rel="noopener" class="brand-gradient-text">PAROT Corp</a> © 2026</span>
+      </div>
+      <div style="display: flex; gap: 18px; font-size: 13px;">
+        <a href="https://near.parotcorp.com" target="_blank" rel="noopener" class="nav-link">P-Near للموقع المباشر</a>
+        <a href="/login.html" class="nav-link">لوحة التحكم</a>
+      </div>
     </div>
   </footer>
 
   <script>
+    let cachedPlans = [];
+    let landingCycle = 'monthly';
+
+    function switchPreview(mode, btn) {
+      document.querySelectorAll('.preview-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (mode === 'car') {
+        document.getElementById('prevIcon').textContent = '🚗';
+        document.getElementById('prevTitle').textContent = 'كيا سيراتو رمادي';
+        document.getElementById('prevMsg1').innerHTML = 'لو سمحت العربية مزنقة عليا ومحتاج أتحرك 🚗<div class="msg-location-card">📍 تم إرفاق الموقع (30.0444, 31.2357)</div>';
+        document.getElementById('prevMsg2').textContent = 'أهلاً بحضرتك، وصلني التنبيه ونازل خلال دقيقة!';
+      } else {
+        document.getElementById('prevIcon').textContent = '💻';
+        document.getElementById('prevTitle').textContent = 'MacBook Pro — غرض مفقود';
+        document.getElementById('prevMsg1').innerHTML = 'لقيت اللابتوب في الكافيه وهو في أمان معايا 💼<div class="msg-location-card">📍 تم إرفاق الموقع (30.0626, 31.3452)</div>';
+        document.getElementById('prevMsg2').textContent = 'شكراً جزيلاً لأمانتك! أنا في الطريق للاستلام الآن.';
+      }
+    }
+
+    function setLandingCycle(cycle) {
+      landingCycle = cycle;
+      document.getElementById('landMonthlyBtn').classList.toggle('active', cycle === 'monthly');
+      document.getElementById('landYearlyBtn').classList.toggle('active', cycle === 'yearly');
+      renderLandingPlans();
+    }
+
+    function renderLandingPlans() {
+      const grid = document.getElementById('landingPricingGrid');
+      if (!cachedPlans.length) return;
+      grid.innerHTML = cachedPlans.map(plan => {
+        const isPro = plan.id === 'pro';
+        const price = landingCycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
+        const unit = landingCycle === 'yearly' ? '/ سنوياً' : '/ شهرياً';
+        return `
+          <div class="card pricing-card ${isPro ? 'featured' : ''}">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 19px; font-weight: 700;">${plan.name}</h3>
+                <span class="badge ${isPro ? 'badge-primary' : 'badge-success'}">${plan.badge}</span>
+              </div>
+              <div class="pricing-price">
+                ${price === 0 ? 'مجاناً' : `${price} <span style="font-size:16px;">${plan.currency}</span>`}
+                ${price > 0 ? `<span>${unit}</span>` : ''}
+              </div>
+              <ul class="pricing-features">
+                ${plan.features.map(f => `<li>✓ <span>${f}</span></li>`).join('')}
+              </ul>
+            </div>
+            <a href="/login.html?tab=signup&plan=${plan.id}" class="btn ${isPro ? 'btn-primary' : 'btn-outline'}" style="width: 100%; padding: 12px;">
+              ${price === 0 ? 'ابدأ مجاناً' : 'اشترك الآن'}
+            </a>
+          </div>
+        `;
+      }).join('');
+    }
+
     fetch('/api/auth/me')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data && data.user) {
-          const navAuth = document.getElementById('navAuthLinks');
-          navAuth.innerHTML = `
+          document.getElementById('navAuthLinks').innerHTML = `
             <a href="/dashboard.html" class="btn btn-primary btn-sm">لوحة التحكم (${data.user.name})</a>
           `;
         }
@@ -172,31 +232,8 @@
     fetch('/api/subscriptions/plans')
       .then(res => res.json())
       .then(data => {
-        const grid = document.getElementById('landingPricingGrid');
-        if (!data.plans) return;
-        grid.innerHTML = data.plans.map(plan => {
-          const isPro = plan.id === 'pro';
-          return `
-            <div class="pricing-card ${isPro ? 'featured' : ''}">
-              <div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <h3 style="font-size: 21px; font-weight: 800; color: var(--dark);">${plan.name}</h3>
-                  <span class="badge ${isPro ? 'badge-primary' : 'badge-success'}">${plan.badge}</span>
-                </div>
-                <div class="pricing-price">
-                  ${plan.priceMonthly === 0 ? 'مجاناً' : `${plan.priceMonthly} <span style="font-size:18px;">${plan.currency}</span>`}
-                  ${plan.priceMonthly > 0 ? '<span>/ شهرياً</span>' : ''}
-                </div>
-                <ul class="pricing-features">
-                  ${plan.features.map(f => `<li>✅ <span>${f}</span></li>`).join('')}
-                </ul>
-              </div>
-              <a href="/login.html?tab=signup&plan=${plan.id}" class="btn ${isPro ? 'btn-primary' : 'btn-outline'}" style="width: 100%; padding: 12px;">
-                ${plan.priceMonthly === 0 ? 'ابدأ مجاناً' : 'اشترك الآن'}
-              </a>
-            </div>
-          `;
-        }).join('');
+        cachedPlans = data.plans || [];
+        renderLandingPlans();
       }).catch(() => {});
   </script>
 </body>

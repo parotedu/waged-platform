@@ -2,8 +2,8 @@ const express = require('express');
 const crypto = require('crypto');
 const QRCode = require('qrcode');
 const db = require('../db');
-const { requireAuth } = require('../auth');
-const { getPlan } = require('../plans');
+const { requireAuth, getBaseUrl } = require('../auth');
+const { getEffectivePlan } = require('../plans');
 
 const router = express.Router();
 
@@ -21,9 +21,7 @@ router.get('/', requireAuth, async (req, res) => {
       ORDER BY i.created_at DESC
     `).all(req.user.id);
 
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.get('host');
-    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+    const baseUrl = getBaseUrl(req);
 
     const itemsWithQr = await Promise.all(items.map(async (item) => {
       const scanUrl = `${baseUrl}/scan.html?code=${item.public_code}`;
@@ -58,8 +56,8 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'يرجى إدخال اسم الغرض أو وسيلة النقل' });
     }
 
-    const user = db.prepare('SELECT plan_id FROM users WHERE id = ?').get(req.user.id);
-    const plan = getPlan(user?.plan_id);
+    const user = db.prepare('SELECT plan_id, subscription_status, subscription_expires_at FROM users WHERE id = ?').get(req.user.id);
+    const plan = getEffectivePlan(user);
     const currentCount = db.prepare('SELECT COUNT(*) as cnt FROM items WHERE user_id = ?').get(req.user.id).cnt;
 
     if (currentCount >= plan.maxItems) {
@@ -86,9 +84,7 @@ router.post('/', requireAuth, async (req, res) => {
       require_location !== undefined ? (require_location ? 1 : 0) : 1
     );
 
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.get('host');
-    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+    const baseUrl = getBaseUrl(req);
     const scanUrl = `${baseUrl}/scan.html?code=${publicCode}`;
     const qrDataUrl = await QRCode.toDataURL(scanUrl, {
       width: 400,
@@ -180,8 +176,8 @@ router.get('/:id/scans', requireAuth, (req, res) => {
       return res.status(404).json({ error: 'الغرض غير موجود' });
     }
 
-    const user = db.prepare('SELECT plan_id FROM users WHERE id = ?').get(req.user.id);
-    const plan = getPlan(user?.plan_id);
+    const user = db.prepare('SELECT plan_id, subscription_status, subscription_expires_at FROM users WHERE id = ?').get(req.user.id);
+    const plan = getEffectivePlan(user);
 
     const scans = db.prepare(`
       SELECT id, session_id, latitude, longitude, accuracy, created_at
