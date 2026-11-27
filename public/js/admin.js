@@ -1,7 +1,9 @@
 let currentAdmin = null;
 let currentFilter = 'pending';
+let currentSubFilter = 'all';
 let socket = null;
 let searchTimer = null;
+let subSearchTimer = null;
 
 function showToast(msg, type = 'info') {
   const container = document.getElementById('toastContainer');
@@ -123,14 +125,17 @@ async function refreshOverview() {
 function updateStats(stats) {
   document.getElementById('statPending').textContent = stats.pendingRequests;
   document.getElementById('pendingCountTab').textContent = stats.pendingRequests;
-  document.getElementById('statApproved').textContent = stats.approvedRequests;
-  document.getElementById('statTotalUsers').textContent = stats.totalUsers;
   document.getElementById('statPaidUsers').textContent = stats.activePaidUsers;
+  document.getElementById('statExpiringSoon').textContent = stats.expiringSoonUsers || 0;
+  document.getElementById('statExpired').textContent = stats.expiredUsers || 0;
+  document.getElementById('expiredCountTab').textContent = stats.expiredUsers || 0;
+  document.getElementById('statTotalUsers').textContent = stats.totalUsers;
 }
 
 function showAdminTab(tab) {
   const map = {
     requests: ['requestsSection', 'tabReqBtn'],
+    subscriptions: ['subscriptionsSection', 'tabSubsBtn'],
     users: ['usersSection', 'tabUsersBtn'],
     admins: ['adminsSection', 'tabAdminsBtn']
   };
@@ -142,6 +147,7 @@ function showAdminTab(tab) {
   });
 
   if (tab === 'requests') loadRequests(currentFilter);
+  else if (tab === 'subscriptions') loadSubscriptions(currentSubFilter);
   else if (tab === 'users') loadUsers();
   else if (tab === 'admins') loadAdmins();
 }
@@ -213,6 +219,173 @@ async function loadRequests(status = 'pending') {
   }
 }
 
+// ============================================================
+// Subscriptions Tracking, Countdown, Extension & Lock
+// ============================================================
+
+function debouncedSubSearch() {
+  clearTimeout(subSearchTimer);
+  subSearchTimer = setTimeout(() => loadSubscriptions(currentSubFilter), 250);
+}
+
+async function loadSubscriptions(filter = 'all') {
+  currentSubFilter = filter;
+  const filterBtnMap = {
+    all: 'subFilterAll',
+    active: 'subFilterActive',
+    expiring_soon: 'subFilterExpiring',
+    expired: 'subFilterExpired',
+    free: 'subFilterFree'
+  };
+  Object.entries(filterBtnMap).forEach(([k, id]) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.className = k === filter ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+  });
+
+  const q = document.getElementById('subSearchInput').value.trim();
+  const list = document.getElementById('subscriptionsList');
+  list.innerHTML = '<div class="card" style="text-align: center; color: var(--text-muted);">جاري التحميل...</div>';
+
+  try {
+    const res = await fetch(`/api/admin/subscriptions?filter=${encodeURIComponent(filter)}&q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    const subs = data.subscriptions || [];
+
+    if (!subs.length) {
+      list.innerHTML = '<div class="card" style="text-align: center; color: var(--text-muted); padding: 36px;">لا توجد اشتراكات مطابقة.</div>';
+      return;
+    }
+
+    const planNames = { free: 'المجانية', pro: 'الاحترافية (Pro)', business: 'الأعمال (Business)' };
+    const stateBadges = {
+      active: '<span class="badge badge-success">اشتراك نشط</span>',
+      expiring_soon: '<span class="badge badge-warning">ينتهي قريباً</span>',
+      expired: '<span class="badge badge-danger">منتهي ومقفول</span>',
+      free: '<span class="badge badge-neutral">مجاني</span>'
+    };
+
+    list.innerHTML = subs.map(s => {
+      const t = s.timing;
+      const expDateText = s.subscription_expires_at
+        ? new Date(s.subscription_expires_at).toLocaleString('ar-EG')
+        : '—';
+
+      return `
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; padding: 18px 20px;">
+          <div style="flex: 1; min-width: 260px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+              <strong style="font-size: 15.5px;">${escapeHtml(s.name)}</strong>
+              <span class="badge badge-primary">${planNames[s.plan_id] || s.plan_id}</span>
+              ${stateBadges[t.state] || ''}
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); display: flex; gap: 14px; flex-wrap: wrap;">
+              <span>البريد: <span class="mono">${escapeHtml(s.email)}</span></span>
+              ${s.phone ? `<span>الهاتف: <span class="mono">${escapeHtml(s.phone)}</span></span>` : ''}
+              <span>رموز QR: <strong>${s.items_count}</strong></span>
+            </div>
+            <div style="font-size: 12.5px; margin-top: 6px; display: flex; gap: 14px; flex-wrap: wrap; color: ${t.isExpired ? 'var(--danger)' : (t.isExpiringSoon ? 'var(--warning)' : 'var(--text-muted)')};">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-weight: 600;">
+                <i data-lucide="clock" style="width: 13px; height: 13px;"></i>
+                <span>${escapeHtml(t.remainingLabel)}</span>
+              </span>
+              ${s.subscription_expires_at ? `<span>تاريخ الانتهاء: ${expDateText}</span>` : ''}
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="quickExtendUser(${s.id}, 30, '${escapeHtml(s.plan_id)}')">
+              <i data-lucide="plus"></i>
+              <span>تمديد +30 يوم</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="openExtendModal(${s.id}, '${escapeHtml(s.name)}', '${escapeHtml(s.plan_id)}', '${escapeHtml(t.remainingLabel)}')">
+              <i data-lucide="pencil"></i>
+              <span>تمديد مخصص</span>
+            </button>
+            ${t.isPaid && !t.isExpired ? `
+              <button type="button" class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="expireUserNow(${s.id}, '${escapeHtml(s.name)}')">
+                <i data-lucide="lock"></i>
+                <span>قفل الآن</span>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    refreshIcons(list);
+  } catch (err) {
+    list.innerHTML = '<div class="card" style="color: var(--danger);">فشل تحميل الاشتراكات</div>';
+  }
+}
+
+async function quickExtendUser(userId, days, currentPlanId) {
+  const planId = (currentPlanId && currentPlanId !== 'free') ? currentPlanId : 'pro';
+  try {
+    const res = await fetch(`/api/admin/users/${userId}/extend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days, planId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showToast(data.message, 'success');
+    await Promise.all([refreshOverview(), loadSubscriptions(currentSubFilter)]);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function openExtendModal(id, name, currentPlanId, remainingLabel) {
+  document.getElementById('extendUserId').value = id;
+  document.getElementById('extendModalTitle').textContent = `تمديد اشتراك: ${name}`;
+  document.getElementById('extendUserSubInfo').textContent = `الحالة الحالية: ${remainingLabel}`;
+  document.getElementById('extendPlanSelect').value = (currentPlanId && currentPlanId !== 'free') ? currentPlanId : 'pro';
+  document.getElementById('extendDaysInput').value = 30;
+  document.getElementById('extendModal').classList.add('active');
+}
+
+function closeExtendModal() {
+  document.getElementById('extendModal').classList.remove('active');
+}
+
+function setExtendDays(d) {
+  document.getElementById('extendDaysInput').value = d;
+}
+
+async function submitExtendSubscription(e) {
+  e.preventDefault();
+  const id = document.getElementById('extendUserId').value;
+  const planId = document.getElementById('extendPlanSelect').value;
+  const days = Number(document.getElementById('extendDaysInput').value);
+
+  try {
+    const res = await fetch(`/api/admin/users/${id}/extend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planId, days })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    closeExtendModal();
+    showToast(data.message, 'success');
+    await Promise.all([refreshOverview(), loadSubscriptions(currentSubFilter)]);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function expireUserNow(userId, name) {
+  try {
+    const res = await fetch(`/api/admin/users/${userId}/expire`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showToast(`تم قفل اشتراك (${name})`, 'info');
+    await Promise.all([refreshOverview(), loadSubscriptions(currentSubFilter)]);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
 function openReviewModal(id, type, userName, planName) {
   document.getElementById('reviewReqId').value = id;
   document.getElementById('reviewActionType').value = type;
@@ -281,27 +454,31 @@ async function loadUsers() {
       return;
     }
 
-    list.innerHTML = users.map(u => `
-      <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 20px;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <strong>${escapeHtml(u.name)}</strong>
-            <span class="badge ${u.plan_id === 'free' ? 'badge-neutral' : 'badge-success'}">${escapeHtml((u.plan_id || 'free').toUpperCase())}</span>
-            ${u.role === 'super_admin' ? '<span class="badge badge-primary">الحساب الرئيسي</span>' : ''}
-            ${u.role === 'admin' ? '<span class="badge badge-primary">مسؤول تفعيل</span>' : ''}
+    list.innerHTML = users.map(u => {
+      const t = u.timing || {};
+      return `
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 20px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <strong>${escapeHtml(u.name)}</strong>
+              <span class="badge ${t.isExpired ? 'badge-danger' : (u.plan_id === 'free' ? 'badge-neutral' : 'badge-success')}">${escapeHtml((u.plan_id || 'free').toUpperCase())}${t.isExpired ? ' (منتهي)' : ''}</span>
+              ${u.role === 'super_admin' ? '<span class="badge badge-primary">الحساب الرئيسي</span>' : ''}
+              ${u.role === 'admin' ? '<span class="badge badge-primary">مسؤول تفعيل</span>' : ''}
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">
+              <span class="mono">${escapeHtml(u.email)}</span>
+              ${u.phone ? ` — <span class="mono">${escapeHtml(u.phone)}</span>` : ''}
+              — رموز QR: ${u.items_count}
+              ${t.remainingLabel ? ` — <span>${escapeHtml(t.remainingLabel)}</span>` : ''}
+            </div>
           </div>
-          <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">
-            <span class="mono">${escapeHtml(u.email)}</span>
-            ${u.phone ? ` — <span class="mono">${escapeHtml(u.phone)}</span>` : ''}
-            — رموز QR: ${u.items_count}
-          </div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="openManualPlanModal(${u.id}, '${escapeHtml(u.name)}', '${escapeHtml(u.plan_id || 'free')}')">
+            <i data-lucide="pencil"></i>
+            <span>تعديل الباقة</span>
+          </button>
         </div>
-        <button type="button" class="btn btn-outline btn-sm" onclick="openManualPlanModal(${u.id}, '${escapeHtml(u.name)}', '${escapeHtml(u.plan_id || 'free')}')">
-          <i data-lucide="pencil"></i>
-          <span>تعديل الباقة</span>
-        </button>
-      </div>
-    `).join('');
+      `;
+    }).join('');
     refreshIcons(list);
   } catch (err) {
     list.innerHTML = '<div class="card" style="color: var(--danger);">فشل تحميل المستخدمين</div>';
@@ -341,7 +518,6 @@ async function submitManualPlan(e) {
   }
 }
 
-// Super Admin: Manage Activation Admins
 async function loadAdmins() {
   const list = document.getElementById('adminsList');
   list.innerHTML = '<div style="color: var(--text-muted); text-align: center;">جاري التحميل...</div>';

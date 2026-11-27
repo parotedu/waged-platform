@@ -58,6 +58,23 @@
       </button>
     </div>
 
+    <!-- Expired Subscription Alert Strip (Shown automatically when paid plan ends) -->
+    <div class="tg-strip" id="expiredAlertBanner" style="display: none; background: var(--danger-light); border-color: #fecaca;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="stat-icon" style="background: #ffffff; color: var(--danger);">
+          <i data-lucide="alert-triangle"></i>
+        </div>
+        <div>
+          <strong style="font-size: 14px; color: var(--danger);">انتهت مدة اشتراكك وتم قفل المزايا المدفوعة</strong>
+          <div style="font-size: 12.5px; color: var(--text-secondary);" id="expiredAlertText">جدّد اشتراكك عبر إنستا باي لإعادة تفعيل كافة الرموز والمزايا فوراً.</div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-danger btn-sm" onclick="showDashboardTab('billing')">
+        <i data-lucide="credit-card"></i>
+        <span>تجديد الاشتراك الآن</span>
+      </button>
+    </div>
+
     <!-- Compact Telegram Prompt (Shown only when unlinked) -->
     <div class="tg-strip" id="telegramBanner" style="display: none;">
       <div style="display: flex; align-items: center; gap: 12px;">

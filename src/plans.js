@@ -73,7 +73,7 @@ function getPlan(planId) {
 }
 
 /**
- * Returns the active plan for a user, falling back to free if a paid plan expired.
+ * Returns the effective active plan for a user, falling back to free if expired or locked.
  */
 function getEffectivePlan(user) {
   if (!user || !user.plan_id || user.plan_id === 'free') {
@@ -84,11 +84,106 @@ function getEffectivePlan(user) {
   }
   if (user.subscription_expires_at) {
     const exp = new Date(user.subscription_expires_at);
-    if (!Number.isNaN(exp.getTime()) && exp.getTime() < Date.now()) {
+    if (!Number.isNaN(exp.getTime()) && exp.getTime() <= Date.now()) {
       return PLANS.free;
     }
   }
   return getPlan(user.plan_id);
 }
 
-module.exports = { PLANS, getPlan, getEffectivePlan };
+/**
+ * Computes exact remaining time and status classification for admin & user dashboards.
+ */
+function getSubscriptionTiming(user) {
+  const planId = user?.plan_id || 'free';
+  const assignedPlan = getPlan(planId);
+
+  if (planId === 'free') {
+    return {
+      state: 'free',
+      isPaid: false,
+      isExpired: false,
+      isExpiringSoon: false,
+      remainingMs: null,
+      remainingDays: null,
+      remainingHours: null,
+      remainingLabel: 'دائم بدون انتهاء',
+      assignedPlan
+    };
+  }
+
+  const now = Date.now();
+  const expTime = user.subscription_expires_at ? new Date(user.subscription_expires_at).getTime() : null;
+  const statusExpired = user.subscription_status === 'expired';
+
+  if (statusExpired || (expTime !== null && expTime <= now)) {
+    const elapsedMs = expTime ? Math.max(0, now - expTime) : 0;
+    const elapsedDays = Math.floor(elapsedMs / (24 * 60 * 60 * 1000));
+    const elapsedHours = Math.floor((elapsedMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+
+    let label = 'انتهى الاشتراك';
+    if (expTime) {
+      if (elapsedDays >= 1) label = `منتهي منذ ${elapsedDays} يوم`;
+      else if (elapsedHours >= 1) label = `منتهي منذ ${elapsedHours} ساعة`;
+      else label = 'انتهى للتو';
+    }
+
+    return {
+      state: 'expired',
+      isPaid: true,
+      isExpired: true,
+      isExpiringSoon: false,
+      remainingMs: 0,
+      remainingDays: 0,
+      remainingHours: 0,
+      remainingLabel: label,
+      assignedPlan
+    };
+  }
+
+  if (expTime === null) {
+    return {
+      state: 'active',
+      isPaid: true,
+      isExpired: false,
+      isExpiringSoon: false,
+      remainingMs: null,
+      remainingDays: null,
+      remainingHours: null,
+      remainingLabel: 'مفتوح المدة',
+      assignedPlan
+    };
+  }
+
+  const remainingMs = expTime - now;
+  const remainingDays = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
+  const remainingHours = Math.floor((remainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+  const isExpiringSoon = remainingMs <= threeDaysMs;
+
+  let remainingLabel = '';
+  if (remainingDays >= 1) {
+    remainingLabel = remainingHours > 0
+      ? `متبقي ${remainingDays} يوم و ${remainingHours} ساعة`
+      : `متبقي ${remainingDays} يوم`;
+  } else if (remainingHours >= 1) {
+    remainingLabel = `متبقي ${remainingHours} ساعة`;
+  } else {
+    const mins = Math.max(1, Math.floor(remainingMs / 60000));
+    remainingLabel = `متبقي ${mins} دقيقة`;
+  }
+
+  return {
+    state: isExpiringSoon ? 'expiring_soon' : 'active',
+    isPaid: true,
+    isExpired: false,
+    isExpiringSoon,
+    remainingMs,
+    remainingDays,
+    remainingHours,
+    remainingLabel,
+    assignedPlan
+  };
+}
+
+module.exports = { PLANS, getPlan, getEffectivePlan, getSubscriptionTiming };

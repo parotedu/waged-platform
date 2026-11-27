@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#2563eb">
-  <title>لوحة تفعيل الحسابات والإدارة — واجد</title>
+  <title>لوحة تفعيل الحسابات والاشتراكات — واجد</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
   <script src="/js/lucide.min.js"></script>
@@ -36,14 +36,14 @@
     </div>
   </nav>
 
-  <!-- Admin Login Gate (shown when unauthenticated or non-admin) -->
+  <!-- Admin Login Gate -->
   <div id="adminLoginGate" class="container" style="display: none; padding-top: 56px; padding-bottom: 56px;">
     <div class="card" style="max-width: 430px; margin: 0 auto; padding: 32px;">
       <div style="text-align: center; margin-bottom: 22px;">
         <div class="stat-icon" style="width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 14px;">
           <i data-lucide="shield-check" style="width: 26px; height: 26px;"></i>
         </div>
-        <h2 style="font-size: 21px; font-weight: 700;">لوحة تفعيل الحسابات</h2>
+        <h2 style="font-size: 21px; font-weight: 700;">لوحة التفعيل والاشتراكات</h2>
         <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">مخصصة للحساب الرئيسي ومسؤولي التفعيل المعتمدين فقط</p>
       </div>
 
@@ -68,7 +68,7 @@
   <!-- Main Admin Console -->
   <div id="adminConsoleBody" class="container" style="display: none; padding-top: 24px; padding-bottom: 64px;">
 
-    <!-- Admin Header -->
+    <!-- Header -->
     <div class="dash-header">
       <div>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -86,46 +86,57 @@
     </div>
 
     <!-- Stats -->
-    <div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));">
+    <div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));">
       <div class="stat-chip">
         <div>
-          <div class="stat-label">طلبات قيد المراجعة</div>
+          <div class="stat-label">طلبات إنستا باي معلقة</div>
           <div class="stat-value" id="statPending">0</div>
         </div>
         <div class="stat-icon" style="color: var(--warning);"><i data-lucide="clock"></i></div>
       </div>
       <div class="stat-chip">
         <div>
-          <div class="stat-label">طلبات تم تفعيلها</div>
-          <div class="stat-value" id="statApproved">0</div>
+          <div class="stat-label">اشتراكات نشطة</div>
+          <div class="stat-value" id="statPaidUsers">0</div>
         </div>
         <div class="stat-icon" style="color: var(--accent);"><i data-lucide="check-circle-2"></i></div>
       </div>
       <div class="stat-chip">
         <div>
-          <div class="stat-label">إجمالي المستخدمين</div>
-          <div class="stat-value" id="statTotalUsers">0</div>
+          <div class="stat-label">تنتهي قريباً (3 أيام)</div>
+          <div class="stat-value" id="statExpiringSoon">0</div>
         </div>
-        <div class="stat-icon"><i data-lucide="user"></i></div>
+        <div class="stat-icon" style="color: var(--warning);"><i data-lucide="alert-triangle"></i></div>
       </div>
       <div class="stat-chip">
         <div>
-          <div class="stat-label">الاشتراكات المدفوعة</div>
-          <div class="stat-value" id="statPaidUsers">0</div>
+          <div class="stat-label">اشتراكات منتهية</div>
+          <div class="stat-value" id="statExpired">0</div>
         </div>
-        <div class="stat-icon"><i data-lucide="credit-card"></i></div>
+        <div class="stat-icon" style="color: var(--danger);"><i data-lucide="lock"></i></div>
+      </div>
+      <div class="stat-chip">
+        <div>
+          <div class="stat-label">إجمالي الحسابات</div>
+          <div class="stat-value" id="statTotalUsers">0</div>
+        </div>
+        <div class="stat-icon"><i data-lucide="user"></i></div>
       </div>
     </div>
 
     <!-- Admin Tabs -->
     <div class="segmented-tabs">
       <button type="button" class="seg-btn active" id="tabReqBtn" onclick="showAdminTab('requests')">
-        <i data-lucide="credit-card"></i>
+        <i data-lucide="send"></i>
         <span>طلبات التفعيل (<span id="pendingCountTab">0</span>)</span>
+      </button>
+      <button type="button" class="seg-btn" id="tabSubsBtn" onclick="showAdminTab('subscriptions')">
+        <i data-lucide="credit-card"></i>
+        <span>متابعة الاشتراكات (<span id="expiredCountTab">0</span> منتهي)</span>
       </button>
       <button type="button" class="seg-btn" id="tabUsersBtn" onclick="showAdminTab('users')">
         <i data-lucide="user"></i>
-        <span>المستخدمون</span>
+        <span>جميع المستخدمين</span>
       </button>
       <button type="button" class="seg-btn" id="tabAdminsBtn" onclick="showAdminTab('admins')" style="display: none;">
         <i data-lucide="shield-check"></i>
@@ -144,7 +155,22 @@
       <div id="requestsList" style="display: flex; flex-direction: column; gap: 12px;"></div>
     </div>
 
-    <!-- 2. Users Management -->
+    <!-- 2. Subscriptions Tracking & Extension -->
+    <div id="subscriptionsSection" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary btn-sm" id="subFilterAll" onclick="loadSubscriptions('all')">الكل</button>
+          <button type="button" class="btn btn-outline btn-sm" id="subFilterActive" onclick="loadSubscriptions('active')">نشط</button>
+          <button type="button" class="btn btn-outline btn-sm" id="subFilterExpiring" onclick="loadSubscriptions('expiring_soon')">ينتهي قريباً</button>
+          <button type="button" class="btn btn-outline btn-sm" id="subFilterExpired" onclick="loadSubscriptions('expired')">اشتراك منتهي</button>
+          <button type="button" class="btn btn-outline btn-sm" id="subFilterFree" onclick="loadSubscriptions('free')">مجاني</button>
+        </div>
+        <input type="text" class="form-control" id="subSearchInput" placeholder="بحث بالاسم أو البريد أو الهاتف..." oninput="debouncedSubSearch()" style="max-width: 280px;">
+      </div>
+      <div id="subscriptionsList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+    </div>
+
+    <!-- 3. Users Management -->
     <div id="usersSection" style="display: none;">
       <div style="display: flex; gap: 10px; margin-bottom: 16px;">
         <input type="text" class="form-control" id="userSearchInput" placeholder="ابحث بالاسم أو البريد الإلكتروني أو الهاتف..." oninput="debouncedUserSearch()" style="max-width: 380px;">
@@ -152,7 +178,7 @@
       <div id="usersList" style="display: flex; flex-direction: column; gap: 10px;"></div>
     </div>
 
-    <!-- 3. Super Admin: Manage Activation Admins -->
+    <!-- 4. Super Admin: Manage Activation Admins -->
     <div id="adminsSection" style="display: none;">
       <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px;" id="adminsLayout">
         <div class="card">
@@ -207,6 +233,41 @@
         <div style="display: flex; gap: 10px;">
           <button type="submit" class="btn btn-primary btn-sm" id="reviewConfirmBtn" style="flex: 1;">تأكيد</button>
           <button type="button" class="btn btn-outline btn-sm" onclick="closeReviewModal()" style="flex: 1;">إلغاء</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Extend / Edit Subscription Modal -->
+  <div class="modal-overlay" id="extendModal">
+    <div class="modal" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 style="font-size: 17px; font-weight: 700;" id="extendModalTitle">تمديد الاشتراك</h3>
+        <button class="modal-close" onclick="closeExtendModal()"><i data-lucide="x"></i></button>
+      </div>
+      <form onsubmit="submitExtendSubscription(event)">
+        <input type="hidden" id="extendUserId" value="">
+        <p id="extendUserSubInfo" style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;"></p>
+        <div class="form-group">
+          <label class="form-label">الباقة</label>
+          <select class="form-control" id="extendPlanSelect">
+            <option value="pro">الباقة الاحترافية (Pro)</option>
+            <option value="business">باقة الأعمال والأساطيل (Business)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">المدة المراد إضافتها (بالأيام)</label>
+          <div style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="setExtendDays(7)">+7 أيام</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="setExtendDays(30)">+30 يوم</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="setExtendDays(90)">+3 أشهر</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="setExtendDays(365)">+سنة</button>
+          </div>
+          <input type="number" class="form-control" id="extendDaysInput" min="1" max="3650" value="30" required>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;">تأكيد التمديد والتفعيل</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="closeExtendModal()" style="flex: 1;">إلغاء</button>
         </div>
       </form>
     </div>

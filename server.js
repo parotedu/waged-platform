@@ -16,6 +16,7 @@ const chatRoutes = require('./src/routes/chatRoutes');
 const subscriptionRoutes = require('./src/routes/subscriptionRoutes');
 const telegramRoutes = require('./src/routes/telegramRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
+const { syncExpiredSubscriptions } = require('./src/subscriptionSync');
 const { BOT_TOKEN, setupTelegramWebhook, startTelegramPolling, stopTelegramPolling } = require('./src/telegram');
 const setupSocket = require('./src/socket');
 
@@ -114,6 +115,14 @@ const PORT = process.env.PORT || 4000;
 
 async function startServer() {
   await db.initDb();
+  await syncExpiredSubscriptions(io, true);
+
+  // Periodically check and lock expired paid subscriptions every 5 minutes
+  const expiryTimer = setInterval(() => {
+    syncExpiredSubscriptions(io, true).catch(console.error);
+  }, 5 * 60 * 1000);
+  expiryTimer.unref();
+
   server.listen(PORT, () => {
     const publicUrl = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
     console.log(`===============================================`);

@@ -171,6 +171,8 @@ function initSocket() {
       showToast(`تم تفعيل ${data.planName} لحسابك بنجاح!`, 'success');
     } else if (data.status === 'rejected') {
       showToast(`تمت مراجعة طلب الترقية: ${data.reason || 'يرجى التحقق من التحويل'}`, 'error');
+    } else if (data.status === 'expired') {
+      showToast('انتهت مدة اشتراكك وتم إيقاف المزايا المدفوعة تلقائياً', 'warning');
     }
     loadUserData();
     loadSubscription();
@@ -193,6 +195,18 @@ async function loadUserData() {
     const adminLink = document.getElementById('adminConsoleLink');
     if (adminLink) {
       adminLink.style.display = (currentUser.role === 'admin' || currentUser.role === 'super_admin') ? 'inline-flex' : 'none';
+    }
+
+    const expiredBanner = document.getElementById('expiredAlertBanner');
+    if (expiredBanner) {
+      if (currentUser.timing && currentUser.timing.isExpired) {
+        expiredBanner.style.display = 'flex';
+        document.getElementById('expiredAlertText').textContent =
+          `انتهت صلاحية (${currentUser.timing.assignedPlan?.name || 'باقتك'}) (${currentUser.timing.remainingLabel}). جدّد عبر إنستا باي لإعادة تفعيل الرموز المقيدة.`;
+        refreshIcons(expiredBanner);
+      } else {
+        expiredBanner.style.display = 'none';
+      }
     }
 
     document.getElementById('settingsName').value = currentUser.name || '';
@@ -328,7 +342,9 @@ async function loadItems() {
       const meta = catMeta[item.category] || catMeta.other;
 
       let statusBadge = '<span class="badge badge-success"><i data-lucide="check-circle-2"></i><span>نشط</span></span>';
-      if (item.status === 'lost') {
+      if (item.lockedByExpiration) {
+        statusBadge = '<span class="badge badge-danger"><i data-lucide="lock"></i><span>مغلق (انتهى الاشتراك)</span></span>';
+      } else if (item.status === 'lost') {
         statusBadge = '<span class="badge badge-danger"><i data-lucide="alert-triangle"></i><span>مفقود</span></span>';
       } else if (item.status === 'disabled') {
         statusBadge = '<span class="badge badge-warning"><i data-lucide="pause-circle"></i><span>معطل</span></span>';
@@ -742,8 +758,14 @@ async function loadSubscription() {
 
     document.getElementById('billingCurrentPlanName').textContent = meData.currentPlan.name;
     const maxLabel = meData.usage.maxItems > 999 ? 'غير محدود' : meData.usage.maxItems;
-    document.getElementById('billingUsageText').textContent = `الاستخدام: ${meData.usage.itemsCount} من ${maxLabel} رموز QR`;
-    document.getElementById('userPlanBadge').textContent = meData.currentPlan.name;
+    let usageLine = `الاستخدام: ${meData.usage.itemsCount} من ${maxLabel} رموز QR`;
+    if (meData.timing && meData.timing.isPaid) {
+      usageLine += ` — ${meData.timing.remainingLabel}`;
+    }
+    document.getElementById('billingUsageText').textContent = usageLine;
+    document.getElementById('userPlanBadge').textContent = meData.timing?.isExpired
+      ? `${meData.currentPlan.name} (انتهى المدفوع)`
+      : meData.currentPlan.name;
 
     const pendingBanner = document.getElementById('pendingPaymentBanner');
     if (meData.pendingRequest) {

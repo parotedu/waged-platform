@@ -3,7 +3,8 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { hashPassword, comparePassword, generateToken, getCookieOptions, requireAuth } = require('../auth');
-const { getEffectivePlan } = require('../plans');
+const { getEffectivePlan, getSubscriptionTiming } = require('../plans');
+const { syncExpiredSubscriptions } = require('../subscriptionSync');
 const { BOT_TOKEN, BOT_USERNAME, sendTelegramMessage } = require('../telegram');
 
 const router = express.Router();
@@ -109,6 +110,8 @@ router.post('/logout', (req, res) => {
 // Current User Details
 router.get('/me', requireAuth, async (req, res) => {
   try {
+    await syncExpiredSubscriptions(req.app.get('io'));
+
     const user = await db.get(
       `SELECT id, name, email, phone, role, telegram_chat_id, telegram_link_token, plan_id, subscription_status, subscription_expires_at, webhook_url, created_at
        FROM users WHERE id = ?`,
@@ -120,6 +123,7 @@ router.get('/me', requireAuth, async (req, res) => {
     }
 
     const plan = getEffectivePlan(user);
+    const timing = getSubscriptionTiming(user);
     const botConfigured = Boolean(BOT_TOKEN && BOT_USERNAME);
     const telegramDeepLink = botConfigured && user.telegram_link_token
       ? `https://t.me/${BOT_USERNAME}?start=${user.telegram_link_token}`
@@ -130,6 +134,7 @@ router.get('/me', requireAuth, async (req, res) => {
         ...user,
         role: user.role || 'user',
         plan,
+        timing,
         botConfigured,
         telegramBotUsername: BOT_USERNAME || null,
         telegramDeepLink

@@ -5,8 +5,25 @@ const db = require('../db');
 const { getBaseUrl } = require('../auth');
 const { notifyOwnerScan } = require('../telegram');
 const { getEffectivePlan } = require('../plans');
+const { syncExpiredSubscriptions } = require('../subscriptionSync');
 
 const router = express.Router();
+
+// Checks if an item is locked due to owner's expired subscription exceeding Free tier quota
+async function isItemLockedByExpiration(item, io = null) {
+  await syncExpiredSubscriptions(io);
+  const owner = await db.get(
+    'SELECT plan_id, subscription_status, subscription_expires_at FROM users WHERE id = ?',
+    [item.user_id]
+  );
+  const effectivePlan = getEffectivePlan(owner);
+  const rankRow = await db.get(
+    'SELECT COUNT(*) as cnt FROM items WHERE user_id = ? AND id < ?',
+    [item.user_id, item.id]
+  );
+  const rank = Number(rankRow?.cnt || 0);
+  return rank >= effectivePlan.maxItems;
+}
 
 // Generate crisp SVG QR code locally
 router.get('/qr/:code', async (req, res) => {
@@ -42,7 +59,7 @@ router.get('/qr/:code', async (req, res) => {
 router.get('/info/:code', async (req, res) => {
   try {
     const item = await db.get(
-      `SELECT id, name, category, custom_message, status, require_location
+      `SELECT id, user_id, name, category, custom_message, status, require_location
        FROM items
        WHERE public_code = ?`,
       [req.params.code]
@@ -54,6 +71,10 @@ router.get('/info/:code', async (req, res) => {
 
     if (item.status === 'disabled') {
       return res.status(403).json({ error: 'تم تعطيل هذا الرمز مؤقتاً بواسطة المالك' });
+    }
+
+    if (await isItemLockedByExpiration(item, req.app.get('io'))) {
+      return res.status(403).json({ error: 'تم إيقاف هذا الرمز مؤقتاً لحين تجديد اشتراك المالك' });
     }
 
     res.json({
@@ -101,6 +122,9 @@ router.post('/record', async (req, res) => {
     }
     if (item.status === 'disabled') {
       return res.status(403).json({ error: 'تم تعطيل هذا الرمز بواسطة المالك' });
+    }
+    if (await isItemLockedByExpiration(item, req.app.get('io'))) {
+      return res.status(403).json({ error: 'تم إيقاف هذا الرمز مؤقتاً لحين تجديد اشتراك المالك' });
     }
 
     const sessionId = clientSessionId || crypto.randomUUID();

@@ -3,7 +3,8 @@ const crypto = require('crypto');
 const db = require('../db');
 const config = require('../config');
 const { requireAuth, getBaseUrl } = require('../auth');
-const { PLANS, getEffectivePlan } = require('../plans');
+const { PLANS, getEffectivePlan, getSubscriptionTiming } = require('../plans');
+const { syncExpiredSubscriptions } = require('../subscriptionSync');
 const { notifyAdminsPaymentRequest } = require('../telegram');
 
 const router = express.Router();
@@ -29,6 +30,8 @@ router.get('/plans', (req, res) => {
 // Get current user's subscription, usage, InstaPay requests, and invoices
 router.get('/me', requireAuth, async (req, res) => {
   try {
+    await syncExpiredSubscriptions(req.app.get('io'));
+
     const user = await db.get(
       `SELECT id, plan_id, subscription_status, subscription_expires_at, webhook_url
        FROM users WHERE id = ?`,
@@ -38,6 +41,7 @@ router.get('/me', requireAuth, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
 
     const plan = getEffectivePlan(user);
+    const timing = getSubscriptionTiming(user);
     const countRow = await db.get('SELECT COUNT(*) as cnt FROM items WHERE user_id = ?', [req.user.id]);
     const itemCount = Number(countRow?.cnt || 0);
 
@@ -63,8 +67,10 @@ router.get('/me', requireAuth, async (req, res) => {
 
     res.json({
       currentPlan: plan,
+      assignedPlanId: user.plan_id || 'free',
       subscriptionStatus: user.subscription_status || 'active',
       expiresAt: user.subscription_expires_at,
+      timing,
       webhookUrl: user.webhook_url || '',
       usage: {
         itemsCount: itemCount,

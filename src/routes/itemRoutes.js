@@ -4,13 +4,22 @@ const QRCode = require('qrcode');
 const db = require('../db');
 const { requireAuth, getBaseUrl } = require('../auth');
 const { getEffectivePlan } = require('../plans');
+const { syncExpiredSubscriptions } = require('../subscriptionSync');
 
 const router = express.Router();
 
-// List all user items
+// List all user items (marks items beyond effective plan limit as lockedByExpiration)
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const items = await db.all(
+    await syncExpiredSubscriptions(req.app.get('io'));
+
+    const user = await db.get(
+      'SELECT plan_id, subscription_status, subscription_expires_at FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    const effectivePlan = getEffectivePlan(user);
+
+    const itemsAsc = await db.all(
       `SELECT 
         i.*,
         (SELECT COUNT(*) FROM scans WHERE item_id = i.id) as scan_count,
@@ -18,13 +27,13 @@ router.get('/', requireAuth, async (req, res) => {
         (SELECT MAX(created_at) FROM scans WHERE item_id = i.id) as last_scan
       FROM items i
       WHERE i.user_id = ?
-      ORDER BY i.created_at DESC`,
+      ORDER BY i.id ASC`,
       [req.user.id]
     );
 
     const baseUrl = getBaseUrl(req);
 
-    const itemsWithQr = await Promise.all(items.map(async (item) => {
+    const enrichedAsc = await Promise.all(itemsAsc.map(async (item, idx) => {
       const scanUrl = `${baseUrl}/scan.html?code=${item.public_code}`;
       const qrDataUrl = await QRCode.toDataURL(scanUrl, {
         width: 360,
@@ -39,12 +48,14 @@ router.get('/', requireAuth, async (req, res) => {
         ...item,
         scan_count: Number(item.scan_count || 0),
         chat_count: Number(item.chat_count || 0),
+        lockedByExpiration: idx >= effectivePlan.maxItems,
         scanUrl,
         qrDataUrl
       };
     }));
 
-    res.json({ items: itemsWithQr });
+    // Return newest first for UI
+    res.json({ items: enrichedAsc.reverse() });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'حدث خطأ أثناء جلب الأغراض' });
@@ -54,6 +65,8 @@ router.get('/', requireAuth, async (req, res) => {
 // Create new item & QR (enforces effective plan quota)
 router.post('/', requireAuth, async (req, res) => {
   try {
+    await syncExpiredSubscriptions(req.app.get('io'));
+
     const { name, category, custom_message, require_location } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'يرجى إدخال اسم الغرض أو وسيلة النقل' });
@@ -69,7 +82,9 @@ router.post('/', requireAuth, async (req, res) => {
 
     if (currentCount >= plan.maxItems) {
       return res.status(403).json({
-        error: `لقد وصلت للحد الأقصى لباقتك الحالية (${plan.maxItems} رموز QR). قم بالترقية لإضافة المزيد من الأغراض.`,
+        error: user?.subscription_status === 'expired'
+          ? `انتهت مدة اشتراكك وتم تقييد الحد إلى ${plan.maxItems} رموز. جدّد اشتراكك لإضافة المزيد.`
+          : `لقد وصلت للحد الأقصى لباقتك الحالية (${plan.maxItems} رموز QR). قم بالترقية لإضافة المزيد من الأغراض.`,
         upgradeRequired: true,
         currentPlan: plan.id
       });
