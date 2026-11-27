@@ -5,14 +5,14 @@ const { notifyOwnerMessage } = require('../telegram');
 
 const router = express.Router();
 
-// Helper to check chat access
-function verifyChatAccess(req, chatId, sessionId) {
-  const chat = db.prepare(`
-    SELECT c.*, i.name as item_name, i.user_id as owner_id
-    FROM chats c
-    JOIN items i ON c.item_id = i.id
-    WHERE c.id = ?
-  `).get(chatId);
+async function verifyChatAccess(req, chatId, sessionId) {
+  const chat = await db.get(
+    `SELECT c.*, i.name as item_name, i.user_id as owner_id
+     FROM chats c
+     JOIN items i ON c.item_id = i.id
+     WHERE c.id = ?`,
+    [chatId]
+  );
 
   if (!chat) return null;
 
@@ -31,34 +31,36 @@ function verifyChatAccess(req, chatId, sessionId) {
   return null;
 }
 
-// Get messages for a chat (plus latest scan coordinates)
-router.get('/:chatId/messages', (req, res) => {
+// Get messages for a chat
+router.get('/:chatId/messages', async (req, res) => {
   try {
     const chatId = req.params.chatId;
     const sessionId = req.query.sessionId || req.headers['x-session-id'];
 
-    const access = verifyChatAccess(req, chatId, sessionId);
+    const access = await verifyChatAccess(req, chatId, sessionId);
     if (!access) {
       return res.status(403).json({ error: 'غير مصرح لك بالوصول لهذه المحادثة' });
     }
 
     if (access.role === 'owner') {
-      db.prepare('UPDATE chats SET unread_owner = 0 WHERE id = ?').run(chatId);
+      await db.run('UPDATE chats SET unread_owner = 0 WHERE id = ?', [chatId]);
     }
 
-    const messages = db.prepare(`
-      SELECT id, sender_type, message, lat, lng, created_at
-      FROM messages
-      WHERE chat_id = ?
-      ORDER BY id ASC
-    `).all(chatId);
+    const messages = await db.all(
+      `SELECT id, sender_type, message, lat, lng, created_at
+       FROM messages
+       WHERE chat_id = ?
+       ORDER BY id ASC`,
+      [chatId]
+    );
 
-    const lastScan = db.prepare(`
-      SELECT latitude, longitude
-      FROM scans
-      WHERE item_id = ? AND session_id = ? AND latitude IS NOT NULL AND longitude IS NOT NULL
-      ORDER BY id DESC LIMIT 1
-    `).get(access.chat.item_id, access.chat.session_id);
+    const lastScan = await db.get(
+      `SELECT latitude, longitude
+       FROM scans
+       WHERE item_id = ? AND session_id = ? AND latitude IS NOT NULL AND longitude IS NOT NULL
+       ORDER BY id DESC LIMIT 1`,
+      [access.chat.item_id, access.chat.session_id]
+    );
 
     res.json({
       role: access.role,
@@ -72,7 +74,7 @@ router.get('/:chatId/messages', (req, res) => {
   }
 });
 
-// Send message via REST endpoint
+// Send message
 router.post('/:chatId/messages', async (req, res) => {
   try {
     const chatId = req.params.chatId;
@@ -86,7 +88,7 @@ router.post('/:chatId/messages', async (req, res) => {
       return res.status(400).json({ error: 'الرسالة طويلة جداً (الحد الأقصى 2000 حرف)' });
     }
 
-    const access = verifyChatAccess(req, chatId, sessionId);
+    const access = await verifyChatAccess(req, chatId, sessionId);
     if (!access) {
       return res.status(403).json({ error: 'غير مصرح لك بإرسال رسائل في هذه المحادثة' });
     }
@@ -94,16 +96,16 @@ router.post('/:chatId/messages', async (req, res) => {
     const cleanMsg = message.trim();
     const senderType = access.role;
 
-    const stmt = db.prepare(`
-      INSERT INTO messages (chat_id, sender_type, message, lat, lng)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    const info = stmt.run(chatId, senderType, cleanMsg, lat || null, lng || null);
+    const info = await db.run(
+      `INSERT INTO messages (chat_id, sender_type, message, lat, lng)
+       VALUES (?, ?, ?, ?, ?)`,
+      [chatId, senderType, cleanMsg, lat || null, lng || null]
+    );
 
     if (senderType === 'scanner') {
-      db.prepare('UPDATE chats SET updated_at = CURRENT_TIMESTAMP, unread_owner = unread_owner + 1 WHERE id = ?').run(chatId);
+      await db.run('UPDATE chats SET updated_at = CURRENT_TIMESTAMP, unread_owner = unread_owner + 1 WHERE id = ?', [chatId]);
     } else {
-      db.prepare('UPDATE chats SET updated_at = CURRENT_TIMESTAMP, unread_owner = 0 WHERE id = ?').run(chatId);
+      await db.run('UPDATE chats SET updated_at = CURRENT_TIMESTAMP, unread_owner = 0 WHERE id = ?', [chatId]);
     }
 
     const savedMessage = {
@@ -139,19 +141,20 @@ router.post('/:chatId/messages', async (req, res) => {
 });
 
 // Owner: Delete a conversation
-router.delete('/:chatId', requireAuth, (req, res) => {
+router.delete('/:chatId', requireAuth, async (req, res) => {
   try {
-    const chat = db.prepare(`
-      SELECT c.id FROM chats c
-      JOIN items i ON c.item_id = i.id
-      WHERE c.id = ? AND i.user_id = ?
-    `).get(req.params.chatId, req.user.id);
+    const chat = await db.get(
+      `SELECT c.id FROM chats c
+       JOIN items i ON c.item_id = i.id
+       WHERE c.id = ? AND i.user_id = ?`,
+      [req.params.chatId, req.user.id]
+    );
 
     if (!chat) {
       return res.status(404).json({ error: 'المحادثة غير موجودة' });
     }
 
-    db.prepare('DELETE FROM chats WHERE id = ?').run(chat.id);
+    await db.run('DELETE FROM chats WHERE id = ?', [chat.id]);
     res.json({ success: true, message: 'تم حذف المحادثة بنجاح' });
   } catch (err) {
     console.error(err);
@@ -159,11 +162,11 @@ router.delete('/:chatId', requireAuth, (req, res) => {
   }
 });
 
-// Owner: Get list of all recent conversations across all user items
-router.get('/owner/conversations', requireAuth, (req, res) => {
+// Owner: List all conversations
+router.get('/owner/conversations', requireAuth, async (req, res) => {
   try {
-    const conversations = db.prepare(`
-      SELECT 
+    const conversations = await db.all(
+      `SELECT 
         c.id as chat_id,
         c.session_id,
         c.unread_owner,
@@ -180,8 +183,9 @@ router.get('/owner/conversations', requireAuth, (req, res) => {
       FROM chats c
       JOIN items i ON c.item_id = i.id
       WHERE i.user_id = ?
-      ORDER BY c.updated_at DESC
-    `).all(req.user.id);
+      ORDER BY c.updated_at DESC`,
+      [req.user.id]
+    );
 
     res.json({ conversations });
   } catch (err) {

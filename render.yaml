@@ -1,3 +1,9 @@
+databases:
+  - name: waged-db
+    plan: free
+    databaseName: waged
+    user: waged_user
+
 services:
   - type: web
     name: waged-platform
@@ -11,14 +17,17 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: waged-db
+          property: connectionString
+      - key: INSTAPAY_NUMBER
+        value: "01557527365"
+      - key: SUPER_ADMIN_EMAIL
+        value: admin@waged.app
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_BOT_USERNAME
         sync: false
-    # To persist SQLite data across redeploys on Render Starter+ plan,
-    # change plan above to 'starter' and uncomment the following block:
-    # disk:
-    #   name: waged-data
-    #   mountPath: /var/data
-    #   sizeGB: 1
-    # And add env var: DATA_DIR=/var/data

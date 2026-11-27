@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const db = require('./db');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'waged-dev-secret-change-in-production';
 
@@ -67,6 +68,36 @@ function requireAuth(req, res, next) {
   next();
 }
 
+// Always checks fresh role from DB so revoked admins lose access immediately
+async function requireAdmin(req, res, next) {
+  try {
+    const user = await db.get('SELECT id, name, email, role FROM users WHERE id = ?', [req.user.id]);
+    if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+      return res.status(403).json({ error: 'غير مصرح: هذه اللوحة مخصصة لمسؤولي تفعيل الحسابات فقط' });
+    }
+    req.adminUser = user;
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'خطأ في التحقق من الصلاحيات' });
+  }
+}
+
+// Strict middleware for the single dedicated Super Admin account
+async function requireSuperAdmin(req, res, next) {
+  try {
+    const user = await db.get('SELECT id, name, email, role FROM users WHERE id = ?', [req.user.id]);
+    if (!user || user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'غير مصرح: هذه الصلاحية محصورة في الحساب الرئيسي فقط' });
+    }
+    req.adminUser = user;
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'خطأ في التحقق من الصلاحيات' });
+  }
+}
+
 module.exports = {
   hashPassword,
   comparePassword,
@@ -74,5 +105,7 @@ module.exports = {
   verifyToken,
   getCookieOptions,
   getBaseUrl,
-  requireAuth
+  requireAuth,
+  requireAdmin,
+  requireSuperAdmin
 };

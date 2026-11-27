@@ -165,6 +165,17 @@ function initSocket() {
   socket.on('user_stop_typing', () => {
     document.getElementById('dashTypingIndicator').style.display = 'none';
   });
+
+  socket.on('subscription_updated', (data) => {
+    if (data.status === 'approved') {
+      showToast(`تم تفعيل ${data.planName} لحسابك بنجاح!`, 'success');
+    } else if (data.status === 'rejected') {
+      showToast(`تمت مراجعة طلب الترقية: ${data.reason || 'يرجى التحقق من التحويل'}`, 'error');
+    }
+    loadUserData();
+    loadSubscription();
+    loadItems();
+  });
 }
 
 async function loadUserData() {
@@ -178,6 +189,11 @@ async function loadUserData() {
     currentUser = data.user;
     document.getElementById('userNameBadge').textContent = currentUser.name;
     document.getElementById('userPlanBadge').textContent = currentUser.plan?.name || 'الباقة المجانية';
+
+    const adminLink = document.getElementById('adminConsoleLink');
+    if (adminLink) {
+      adminLink.style.display = (currentUser.role === 'admin' || currentUser.role === 'super_admin') ? 'inline-flex' : 'none';
+    }
 
     document.getElementById('settingsName').value = currentUser.name || '';
     document.getElementById('settingsEmail').value = currentUser.email || '';
@@ -711,7 +727,7 @@ function deleteItem(id) {
   });
 }
 
-// Subscriptions & Billing
+// Subscriptions & Billing (InstaPay Flow)
 async function loadSubscription() {
   try {
     const [plansRes, meRes] = await Promise.all([
@@ -729,8 +745,29 @@ async function loadSubscription() {
     document.getElementById('billingUsageText').textContent = `الاستخدام: ${meData.usage.itemsCount} من ${maxLabel} رموز QR`;
     document.getElementById('userPlanBadge').textContent = meData.currentPlan.name;
 
+    const pendingBanner = document.getElementById('pendingPaymentBanner');
+    if (meData.pendingRequest) {
+      const reqPlan = allPlans.find(p => p.id === meData.pendingRequest.plan_id);
+      pendingBanner.style.display = 'flex';
+      pendingBanner.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="stat-icon" style="color: var(--warning);"><i data-lucide="clock"></i></div>
+          <div>
+            <strong style="font-size: 14px;">طلب الترقية إلى (${escapeHtml(reqPlan?.name || meData.pendingRequest.plan_id)}) قيد المراجعة</strong>
+            <div style="font-size: 12.5px; color: var(--text-secondary);">
+              تم استلام إشعار التحويل عبر إنستا باي (${escapeHtml(meData.pendingRequest.sender_account)}) على الرقم <span class="mono">${escapeHtml(meData.pendingRequest.target_number)}</span>. سيتم التأكد وتفعيل حسابك خلال 24 ساعة.
+            </div>
+          </div>
+        </div>
+        <span class="badge badge-warning">جاري التحقق</span>
+      `;
+      refreshIcons(pendingBanner);
+    } else {
+      pendingBanner.style.display = 'none';
+    }
+
     renderBillingPlans();
-    renderInvoices(meData.invoices || []);
+    renderBillingHistory(meData.requests || [], meData.invoices || []);
   } catch (err) {
     console.error(err);
   }
@@ -741,11 +778,23 @@ function renderBillingPlans() {
   if (!grid || !allPlans.length) return;
   const cycle = document.getElementById('billingCycleSelect').value;
   const currentId = subInfo?.currentPlan?.id || 'free';
+  const hasPending = Boolean(subInfo?.pendingRequest);
 
   grid.innerHTML = allPlans.map(plan => {
     const isCurrent = plan.id === currentId;
     const price = cycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
     const periodLabel = cycle === 'yearly' ? '/ سنوياً' : '/ شهرياً';
+
+    let btnHtml = '';
+    if (isCurrent) {
+      btnHtml = `<button class="btn btn-outline" style="width: 100%; padding: 11px;" disabled>مفعلة حالياً</button>`;
+    } else if (plan.id === 'free') {
+      btnHtml = `<button onclick="downgradeToFree()" class="btn btn-outline" style="width: 100%; padding: 11px;">العودة للمجانية</button>`;
+    } else if (hasPending && subInfo.pendingRequest.plan_id === plan.id) {
+      btnHtml = `<button class="btn btn-soft" style="width: 100%; padding: 11px;" disabled>طلبك قيد المراجعة</button>`;
+    } else {
+      btnHtml = `<button onclick="openInstapayModal('${plan.id}')" class="btn btn-primary" style="width: 100%; padding: 11px;" ${hasPending ? 'disabled' : ''}>الدفع عبر إنستا باي</button>`;
+    }
 
     return `
       <div class="card pricing-card ${plan.id === 'pro' ? 'featured' : ''}">
@@ -762,60 +811,127 @@ function renderBillingPlans() {
             ${plan.features.map(f => `<li><i data-lucide="check" style="color: var(--accent);"></i><span>${f}</span></li>`).join('')}
           </ul>
         </div>
-        <button
-          onclick="subscribePlan('${plan.id}')"
-          class="btn ${isCurrent ? 'btn-outline' : 'btn-primary'}"
-          style="width: 100%; padding: 11px;"
-          ${isCurrent ? 'disabled' : ''}>
-          ${isCurrent ? 'مفعلة حالياً' : (price === 0 ? 'العودة للمجانية' : 'ترقية وتفعيل')}
-        </button>
+        ${btnHtml}
       </div>
     `;
   }).join('');
   refreshIcons(grid);
 }
 
-async function subscribePlan(planId) {
+function openInstapayModal(planId) {
+  const plan = allPlans.find(p => p.id === planId);
+  if (!plan) return;
   const cycle = document.getElementById('billingCycleSelect').value;
-  const promoCode = document.getElementById('promoCodeInput').value.trim();
+  const amount = cycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
+  const cycleLabel = cycle === 'yearly' ? 'سنوياً' : 'شهرياً';
+  const targetNum = subInfo?.paymentConfig?.targetNumber || '01557527365';
+
+  document.getElementById('ipPlanId').value = plan.id;
+  document.getElementById('ipBillingCycle').value = cycle;
+  document.getElementById('ipPlanName').textContent = `${plan.name} (${cycleLabel})`;
+  document.getElementById('ipAmount').textContent = `${amount} ${plan.currency}`;
+  document.getElementById('ipTargetNumber').textContent = targetNum;
+  document.getElementById('ipSenderAccount').value = currentUser?.phone || '';
+  document.getElementById('ipReferenceNote').value = '';
+
+  document.getElementById('instapayModal').classList.add('active');
+  refreshIcons(document.getElementById('instapayModal'));
+}
+
+function closeInstapayModal() {
+  document.getElementById('instapayModal').classList.remove('active');
+}
+
+function copyInstapayNumber() {
+  const num = document.getElementById('ipTargetNumber').textContent.trim();
+  navigator.clipboard.writeText(num).then(() => {
+    showToast(`تم نسخ رقم إنستا باي: ${num}`, 'success');
+  });
+}
+
+async function handleSubmitInstapay(e) {
+  e.preventDefault();
+  const btn = document.getElementById('ipSubmitBtn');
+  btn.disabled = true;
+
+  const payload = {
+    planId: document.getElementById('ipPlanId').value,
+    billingCycle: document.getElementById('ipBillingCycle').value,
+    senderAccount: document.getElementById('ipSenderAccount').value.trim(),
+    referenceNote: document.getElementById('ipReferenceNote').value.trim()
+  };
 
   try {
-    const res = await fetch('/api/subscriptions/subscribe', {
+    const res = await fetch('/api/subscriptions/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planId, billingCycle: cycle, promoCode })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'فشل تفعيل الباقة');
+    if (!res.ok) throw new Error(data.error || 'تعذر إرسال الطلب');
 
+    closeInstapayModal();
     showToast(data.message, 'success');
-    await loadUserData();
     await loadSubscription();
-    await loadItems();
   } catch (err) {
     showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 
-function renderInvoices(invoices) {
+function downgradeToFree() {
+  askConfirm('العودة للباقة المجانية', 'هل تريد التحويل إلى الباقة المجانية؟', async () => {
+    try {
+      const res = await fetch('/api/subscriptions/downgrade', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      showToast(data.message, 'info');
+      await loadUserData();
+      await loadSubscription();
+      await loadItems();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+}
+
+function renderBillingHistory(requests, invoices) {
   const box = document.getElementById('invoicesList');
-  if (!invoices.length) {
-    box.innerHTML = 'لا توجد فواتير مسجلة حتى الآن.';
+  if (!requests.length && !invoices.length) {
+    box.innerHTML = 'لا توجد طلبات تفعيل أو فواتير مسجلة حتى الآن.';
     return;
   }
+
+  const statusMeta = {
+    pending: { cls: 'badge-warning', label: 'قيد المراجعة (خلال 24 ساعة)' },
+    approved: { cls: 'badge-success', label: 'تم التفعيل' },
+    rejected: { cls: 'badge-danger', label: 'مرفوض' }
+  };
+
   box.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 10px;">
-      ${invoices.map(inv => `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; background: var(--bg-subtle); border-radius: 10px; border: 1px solid var(--card-border); flex-wrap: wrap; gap: 8px;">
-          <div>
-            <strong>#${escapeHtml(inv.reference_code)}</strong> — <span class="badge badge-primary">${escapeHtml(inv.plan_id.toUpperCase())}</span>
-            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${new Date(inv.created_at).toLocaleString('ar-EG')}</div>
+      ${requests.map(r => {
+        const st = statusMeta[r.status] || statusMeta.pending;
+        return `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: var(--bg-subtle); border-radius: 10px; border: 1px solid var(--card-border); flex-wrap: wrap; gap: 8px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <strong>طلب #${r.id}</strong>
+                <span class="badge badge-primary">${escapeHtml(r.plan_id.toUpperCase())}</span>
+                <span class="badge ${st.cls}">${st.label}</span>
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                إنستا باي من: <span class="mono">${escapeHtml(r.sender_account)}</span> — ${new Date(r.created_at).toLocaleString('ar-EG')}
+              </div>
+              ${r.admin_note ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">ملاحظة الإدارة: ${escapeHtml(r.admin_note)}</div>` : ''}
+            </div>
+            <div style="font-weight: 700; color: var(--text-main);">
+              ${r.amount} ${escapeHtml(r.currency)} (${r.billing_cycle === 'yearly' ? 'سنوي' : 'شهري'})
+            </div>
           </div>
-          <div style="font-weight: 700; color: var(--accent);">
-            ${inv.amount} ${escapeHtml(inv.currency)} (${inv.billing_cycle === 'yearly' ? 'سنوي' : 'شهري'})
-          </div>
-        </div>
-      `).join('')}
+        `;
+      }).join('')}
     </div>
   `;
 }

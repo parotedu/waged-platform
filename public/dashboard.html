@@ -24,6 +24,10 @@
         <span>واجد <small class="mono" style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Waged</small></span>
       </a>
       <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <a href="/admin.html" id="adminConsoleLink" class="btn btn-soft btn-sm" style="display: none;">
+          <i data-lucide="shield-check"></i>
+          <span>لوحة التفعيل</span>
+        </a>
         <span class="badge badge-primary nav-hide-mobile" id="userPlanBadge">الباقة المجانية</span>
         <span id="userNameBadge" class="nav-hide-mobile" style="font-weight: 600; font-size: 13.5px; color: var(--text-secondary);"></span>
         <button type="button" class="icon-btn" onclick="enableSoundAlerts()" id="soundToggleBtn" title="تفعيل صوت التنبيهات">
@@ -164,6 +168,8 @@
 
     <!-- 3. Billing & Subscriptions Section -->
     <div id="billingSection" style="display: none;">
+      <div id="pendingPaymentBanner" class="tg-strip" style="display: none; background: var(--warning-light); border-color: #fde68a;"></div>
+
       <div class="card" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
         <div>
           <span class="badge badge-success" style="margin-bottom: 6px;">باقتك الحالية</span>
@@ -175,15 +181,18 @@
             <option value="monthly">دفع شهري</option>
             <option value="yearly">دفع سنوي (وفر 20%)</option>
           </select>
-          <input type="text" id="promoCodeInput" class="form-control" placeholder="كود خصم (اختياري)" style="width: 175px;">
+          <span class="badge badge-primary" style="padding: 8px 14px;">
+            <i data-lucide="send"></i>
+            <span>الدفع عبر InstaPay</span>
+          </span>
         </div>
       </div>
 
       <div class="pricing-grid" id="billingPlansGrid"></div>
 
       <div class="card" style="margin-top: 22px;">
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">سجل الفواتير والاشتراكات</h3>
-        <div id="invoicesList" style="font-size: 13px; color: var(--text-muted);">لا توجد فواتير سابقة.</div>
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">طلبات التفعيل والفواتير</h3>
+        <div id="invoicesList" style="font-size: 13px; color: var(--text-muted);">لا توجد طلبات سابقة.</div>
       </div>
     </div>
 
@@ -371,6 +380,64 @@
         <button class="modal-close" onclick="closeScansModal()"><i data-lucide="x"></i></button>
       </div>
       <div id="scansModalContent" style="max-height: 60vh; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <!-- InstaPay Payment Modal -->
+  <div class="modal-overlay" id="instapayModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 style="font-size: 17.5px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="credit-card"></i>
+          <span>الدفع عبر إنستا باي (InstaPay)</span>
+        </h3>
+        <button class="modal-close" onclick="closeInstapayModal()"><i data-lucide="x"></i></button>
+      </div>
+
+      <div style="background: var(--bg-subtle); border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px;">
+          <span style="color: var(--text-muted);">الباقة المختارة:</span>
+          <strong id="ipPlanName">-</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 10px;">
+          <span style="color: var(--text-muted);">المبلغ المطلوب تحويله:</span>
+          <strong id="ipAmount" style="color: var(--primary); font-size: 16px;">-</strong>
+        </div>
+        <div style="padding-top: 10px; border-top: 1px solid var(--card-border);">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">رقم إنستا باي للتحويل عليه:</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid var(--primary-border); border-radius: 10px; padding: 10px 12px;">
+            <strong class="mono" id="ipTargetNumber" style="font-size: 17px; color: var(--primary);">01557527365</strong>
+            <button type="button" class="btn btn-soft btn-sm" onclick="copyInstapayNumber()">
+              <i data-lucide="copy"></i>
+              <span>نسخ الرقم</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.65;">
+        بعد تحويل المبلغ عبر تطبيق <strong>InstaPay</strong> إلى الرقم الموضح أعلاه، أدخل رقمك أو حسابك المحول منه لإرسال إشعار المراجعة. سيتم التأكد وتفعيل حسابك في غضون <strong>24 ساعة</strong>.
+      </div>
+
+      <form onsubmit="handleSubmitInstapay(event)">
+        <input type="hidden" id="ipPlanId" value="">
+        <input type="hidden" id="ipBillingCycle" value="monthly">
+        <div class="form-group">
+          <label class="form-label">رقم الهاتف أو عنوان إنستا باي المحول منه</label>
+          <input type="text" class="form-control" id="ipSenderAccount" required placeholder="مثال: 010xxxxxxxx أو name@instapay">
+        </div>
+        <div class="form-group">
+          <label class="form-label">رقم المرجع / ملاحظات التحويل (اختياري)</label>
+          <input type="text" class="form-control" id="ipReferenceNote" placeholder="مثال: تم التحويل الساعة 10 مساءً">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn btn-primary" id="ipSubmitBtn" style="flex: 1;">
+            <i data-lucide="send"></i>
+            <span>إرسال إشعار التحويل</span>
+          </button>
+          <button type="button" class="btn btn-outline" onclick="closeInstapayModal()">إلغاء</button>
+        </div>
+      </form>
     </div>
   </div>
 

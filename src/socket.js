@@ -17,7 +17,7 @@ function parseCookies(cookieHeader) {
 }
 
 function setupSocket(io) {
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     let currentRoom = null;
 
     const cookies = parseCookies(socket.handshake.headers.cookie);
@@ -27,57 +27,68 @@ function setupSocket(io) {
     if (handshakeUser) {
       socket.user = handshakeUser;
       socket.join(`owner_${handshakeUser.id}`);
+      try {
+        const u = await db.get('SELECT role FROM users WHERE id = ?', [handshakeUser.id]);
+        if (u && (u.role === 'admin' || u.role === 'super_admin')) {
+          socket.join('admins_room');
+        }
+      } catch (e) {}
     }
 
-    socket.on('join_chat', (data) => {
-      const { chatId, sessionId, token } = data || {};
-      if (!chatId) return;
+    socket.on('join_chat', async (data) => {
+      try {
+        const { chatId, sessionId, token } = data || {};
+        if (!chatId) return;
 
-      const chat = db.prepare(`
-        SELECT c.*, i.name as item_name, i.user_id as owner_id
-        FROM chats c
-        JOIN items i ON c.item_id = i.id
-        WHERE c.id = ?
-      `).get(chatId);
+        const chat = await db.get(
+          `SELECT c.*, i.name as item_name, i.user_id as owner_id
+           FROM chats c
+           JOIN items i ON c.item_id = i.id
+           WHERE c.id = ?`,
+          [chatId]
+        );
 
-      if (!chat) {
-        return socket.emit('error', 'المحادثة غير موجودة');
+        if (!chat) {
+          return socket.emit('error', 'المحادثة غير موجودة');
+        }
+
+        let isAuthorized = false;
+        let role = 'scanner';
+
+        const activeUser = socket.user || (token ? verifyToken(token) : null);
+        if (activeUser && activeUser.id === chat.owner_id) {
+          isAuthorized = true;
+          role = 'owner';
+        }
+
+        if (!isAuthorized && sessionId && chat.session_id === sessionId) {
+          isAuthorized = true;
+          role = 'scanner';
+        }
+
+        if (!isAuthorized) {
+          return socket.emit('error', 'غير مصرح بالدخول لهذه الغرفة');
+        }
+
+        if (currentRoom && currentRoom !== `chat_${chatId}`) {
+          socket.leave(currentRoom);
+        }
+
+        const roomName = `chat_${chatId}`;
+        socket.join(roomName);
+        currentRoom = roomName;
+        socket.role = role;
+        socket.chatId = Number(chatId);
+        socket.ownerId = chat.owner_id;
+        socket.itemName = chat.item_name;
+
+        socket.emit('joined', { role, chatId: Number(chatId), itemName: chat.item_name });
+      } catch (err) {
+        console.error('Socket join_chat error:', err);
       }
-
-      let isAuthorized = false;
-      let role = 'scanner';
-
-      const activeUser = socket.user || (token ? verifyToken(token) : null);
-      if (activeUser && activeUser.id === chat.owner_id) {
-        isAuthorized = true;
-        role = 'owner';
-      }
-
-      if (!isAuthorized && sessionId && chat.session_id === sessionId) {
-        isAuthorized = true;
-        role = 'scanner';
-      }
-
-      if (!isAuthorized) {
-        return socket.emit('error', 'غير مصرح بالدخول لهذه الغرفة');
-      }
-
-      if (currentRoom && currentRoom !== `chat_${chatId}`) {
-        socket.leave(currentRoom);
-      }
-
-      const roomName = `chat_${chatId}`;
-      socket.join(roomName);
-      currentRoom = roomName;
-      socket.role = role;
-      socket.chatId = Number(chatId);
-      socket.ownerId = chat.owner_id;
-      socket.itemName = chat.item_name;
-
-      socket.emit('joined', { role, chatId: Number(chatId), itemName: chat.item_name });
     });
 
-    socket.on('send_message', (data) => {
+    socket.on('send_message', async (data) => {
       const { chatId, message, lat, lng } = data || {};
       if (!chatId || !message || !message.trim()) return;
 
@@ -89,16 +100,16 @@ function setupSocket(io) {
       const cleanText = message.trim().slice(0, 2000);
 
       try {
-        const stmt = db.prepare(`
-          INSERT INTO messages (chat_id, sender_type, message, lat, lng)
-          VALUES (?, ?, ?, ?, ?)
-        `);
-        const info = stmt.run(chatId, role, cleanText, lat || null, lng || null);
+        const info = await db.run(
+          `INSERT INTO messages (chat_id, sender_type, message, lat, lng)
+           VALUES (?, ?, ?, ?, ?)`,
+          [chatId, role, cleanText, lat || null, lng || null]
+        );
 
         if (role === 'scanner') {
-          db.prepare('UPDATE chats SET updated_at = CURRENT_TIMESTAMP, unread_owner = unread_owner + 1 WHERE id = ?').run(chatId);
+          await db.run('UPDATE chats SET updated_at = CURRENT_TIMESTAMP, unread_owner = unread_owner + 1 WHERE id = ?', [chatId]);
         } else {
-          db.prepare('UPDATE chats SET updated_at = CURRENT_TIMESTAMP, unread_owner = 0 WHERE id = ?').run(chatId);
+          await db.run('UPDATE chats SET updated_at = CURRENT_TIMESTAMP, unread_owner = 0 WHERE id = ?', [chatId]);
         }
 
         const newMsg = {

@@ -8,10 +8,10 @@ const { getEffectivePlan } = require('../plans');
 
 const router = express.Router();
 
-// Generate crisp SVG QR code locally (no third-party leaks)
+// Generate crisp SVG QR code locally
 router.get('/qr/:code', async (req, res) => {
   try {
-    const item = db.prepare('SELECT public_code FROM items WHERE public_code = ?').get(req.params.code);
+    const item = await db.get('SELECT public_code FROM items WHERE public_code = ?', [req.params.code]);
     if (!item) {
       return res.status(404).send('QR code not found');
     }
@@ -38,14 +38,15 @@ router.get('/qr/:code', async (req, res) => {
   }
 });
 
-// Get public info for scanned QR
-router.get('/info/:code', (req, res) => {
+// Get public info for scanned QR (Zero PII)
+router.get('/info/:code', async (req, res) => {
   try {
-    const item = db.prepare(`
-      SELECT id, name, category, custom_message, status, require_location
-      FROM items
-      WHERE public_code = ?
-    `).get(req.params.code);
+    const item = await db.get(
+      `SELECT id, name, category, custom_message, status, require_location
+       FROM items
+       WHERE public_code = ?`,
+      [req.params.code]
+    );
 
     if (!item) {
       return res.status(404).json({ error: 'رمز الـ QR غير صالح أو تم حذفه' });
@@ -55,7 +56,6 @@ router.get('/info/:code', (req, res) => {
       return res.status(403).json({ error: 'تم تعطيل هذا الرمز مؤقتاً بواسطة المالك' });
     }
 
-    // Strictly anonymous data (Zero PII)
     res.json({
       name: item.name,
       category: item.category,
@@ -69,10 +69,12 @@ router.get('/info/:code', (req, res) => {
   }
 });
 
-// Fire custom user webhook if configured and allowed by plan
 async function triggerUserWebhook(userId, payload) {
   try {
-    const user = db.prepare('SELECT plan_id, subscription_status, subscription_expires_at, webhook_url FROM users WHERE id = ?').get(userId);
+    const user = await db.get(
+      'SELECT plan_id, subscription_status, subscription_expires_at, webhook_url FROM users WHERE id = ?',
+      [userId]
+    );
     if (!user || !user.webhook_url) return;
     const plan = getEffectivePlan(user);
     if (!plan.capabilities.webhookAlerts) return;
@@ -93,7 +95,7 @@ router.post('/record', async (req, res) => {
   try {
     const { code, latitude, longitude, accuracy, sessionId: clientSessionId } = req.body;
 
-    const item = db.prepare('SELECT id, name, category, status, user_id FROM items WHERE public_code = ?').get(code);
+    const item = await db.get('SELECT id, name, category, status, user_id FROM items WHERE public_code = ?', [code]);
     if (!item) {
       return res.status(404).json({ error: 'الرمز غير موجود' });
     }
@@ -104,26 +106,28 @@ router.post('/record', async (req, res) => {
     const sessionId = clientSessionId || crypto.randomUUID();
     const ipHash = crypto.createHash('sha256').update(req.ip || '127.0.0.1').digest('hex').substring(0, 16);
 
-    db.prepare(`
-      INSERT INTO scans (item_id, session_id, latitude, longitude, accuracy, ip_hash)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      item.id,
-      sessionId,
-      latitude || null,
-      longitude || null,
-      accuracy || null,
-      ipHash
+    await db.run(
+      `INSERT INTO scans (item_id, session_id, latitude, longitude, accuracy, ip_hash)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        item.id,
+        sessionId,
+        latitude || null,
+        longitude || null,
+        accuracy || null,
+        ipHash
+      ]
     );
 
-    let chat = db.prepare('SELECT id FROM chats WHERE item_id = ? AND session_id = ?').get(item.id, sessionId);
+    let chat = await db.get('SELECT id FROM chats WHERE item_id = ? AND session_id = ?', [item.id, sessionId]);
     let isNewChat = false;
     if (!chat) {
       isNewChat = true;
-      const chatInfo = db.prepare(`
-        INSERT INTO chats (item_id, session_id, unread_owner)
-        VALUES (?, ?, 1)
-      `).run(item.id, sessionId);
+      const chatInfo = await db.run(
+        `INSERT INTO chats (item_id, session_id, unread_owner)
+         VALUES (?, ?, 1)`,
+        [item.id, sessionId]
+      );
       chat = { id: chatInfo.lastInsertRowid };
 
       let sysMsg = item.status === 'lost'
@@ -132,10 +136,11 @@ router.post('/record', async (req, res) => {
       if (latitude && longitude) {
         sysMsg += ' تم إرفاق موقعك الجغرافي لمساعدة المالك.';
       }
-      db.prepare(`
-        INSERT INTO messages (chat_id, sender_type, message, lat, lng)
-        VALUES (?, 'system', ?, ?, ?)
-      `).run(chat.id, sysMsg, latitude || null, longitude || null);
+      await db.run(
+        `INSERT INTO messages (chat_id, sender_type, message, lat, lng)
+         VALUES (?, 'system', ?, ?, ?)`,
+        [chat.id, sysMsg, latitude || null, longitude || null]
+      );
     }
 
     const baseUrl = getBaseUrl(req);

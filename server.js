@@ -15,6 +15,7 @@ const scanRoutes = require('./src/routes/scanRoutes');
 const chatRoutes = require('./src/routes/chatRoutes');
 const subscriptionRoutes = require('./src/routes/subscriptionRoutes');
 const telegramRoutes = require('./src/routes/telegramRoutes');
+const adminRoutes = require('./src/routes/adminRoutes');
 const { BOT_TOKEN, setupTelegramWebhook, startTelegramPolling, stopTelegramPolling } = require('./src/telegram');
 const setupSocket = require('./src/socket');
 
@@ -30,11 +31,9 @@ const io = new Server(server, {
   }
 });
 
-// Attach io to app for access in routes
 app.set('io', io);
 setupSocket(io);
 
-// Security Headers (Helmet)
 const isProd = process.env.NODE_ENV === 'production';
 app.use(helmet({
   hsts: isProd,
@@ -53,16 +52,14 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// CORS & Parsing
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || true, credentials: true }));
 app.use(cookieParser());
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
-// Rate Limiters
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 400,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'تم تجاوز الحد المسموح من الطلبات، يرجى المحاولة لاحقاً.' }
@@ -70,7 +67,7 @@ const apiLimiter = rateLimit({
 
 const scanLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 40,
+  max: 45,
   message: { error: 'طلبات كثيرة جداً، يرجى الانتظار قليلاً.' }
 });
 
@@ -84,16 +81,17 @@ app.use('/api/scan', scanRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/admin', adminRoutes);
 
-// Health check (verifies SQLite readiness for Render)
-app.get('/api/health', (req, res) => {
+// Health check
+app.get('/api/health', async (req, res) => {
   try {
-    db.prepare('SELECT 1').get();
+    await db.get('SELECT 1 as ok');
     res.json({
       status: 'ok',
-      db: 'connected',
-      platform: 'Waged by Parot',
-      version: '2.1.0',
+      db: db.isPostgres ? 'postgresql' : 'sqlite',
+      platform: 'Waged',
+      version: '2.3.0',
       timestamp: new Date().toISOString()
     });
   } catch (err) {
@@ -113,29 +111,38 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  const publicUrl = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
-  console.log(`===============================================`);
-  console.log(`🚀 منصة واجد (Waged by Parot) تعمل الآن بنجاح!`);
-  console.log(`🌐 الرابط: ${publicUrl}`);
-  console.log(`===============================================`);
 
-  if (BOT_TOKEN) {
-    if (publicUrl.startsWith('https://')) {
-      setupTelegramWebhook(publicUrl).catch(console.error);
-    } else if (process.env.TELEGRAM_POLLING !== 'false') {
-      startTelegramPolling();
+async function startServer() {
+  await db.initDb();
+  server.listen(PORT, () => {
+    const publicUrl = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+    console.log(`===============================================`);
+    console.log(`منصة واجد (Waged) تعمل الآن بنجاح!`);
+    console.log(`الرابط: ${publicUrl}`);
+    console.log(`لوحة التفعيل والإدارة: ${publicUrl}/admin.html`);
+    console.log(`===============================================`);
+
+    if (BOT_TOKEN) {
+      if (publicUrl.startsWith('https://')) {
+        setupTelegramWebhook(publicUrl).catch(console.error);
+      } else if (process.env.TELEGRAM_POLLING !== 'false') {
+        startTelegramPolling();
+      }
     }
-  }
+  });
+}
+
+startServer().catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });
 
-// Graceful shutdown for Render & zero-downtime restarts
 function shutdown(signal) {
   console.log(`\nReceived ${signal}, shutting down gracefully...`);
   stopTelegramPolling();
-  server.close(() => {
+  server.close(async () => {
     try {
-      db.close();
+      await db.closeDb();
     } catch (e) {}
     process.exit(0);
   });

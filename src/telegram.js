@@ -46,10 +46,6 @@ async function sendTelegramMessage(chatId, text, replyMarkup = null) {
   }
 }
 
-/**
- * Handle incoming Telegram bot update (webhook or polling)
- * Supports `/start <telegram_link_token>` for 1-click account linking.
- */
 async function handleTelegramUpdate(update) {
   try {
     const msg = update && update.message;
@@ -65,25 +61,25 @@ async function handleTelegramUpdate(update) {
       if (!token) {
         await sendTelegramMessage(
           chatId,
-          `👋 أهلاً بك في بوت <b>منصة واجد (Waged)</b>!\n\nلربط حسابك تلقائياً، افتح لوحة التحكم في منصة واجد واضغط على زر <b>ربط تليجرام التلقائي</b>، أو استخدم معرفك الرقمي التالي للربط اليدوي:\n\n<code>${chatId}</code>`
+          `أهلاً بك في بوت <b>منصة واجد (Waged)</b>!\n\nلربط حسابك تلقائياً، افتح لوحة التحكم في منصة واجد واضغط على زر <b>ربط تليجرام التلقائي</b>، أو استخدم معرفك الرقمي التالي للربط اليدوي:\n\n<code>${chatId}</code>`
         );
         return;
       }
 
-      const user = db.prepare('SELECT id, name FROM users WHERE telegram_link_token = ?').get(token);
+      const user = await db.get('SELECT id, name FROM users WHERE telegram_link_token = ?', [token]);
       if (!user) {
         await sendTelegramMessage(
           chatId,
-          '⚠️ رمز الربط غير صالح أو منتهي الصلاحية. يرجى العودة إلى لوحة التحكم وإعادة المحاولة.'
+          'رمز الربط غير صالح أو منتهي الصلاحية. يرجى العودة إلى لوحة التحكم وإعادة المحاولة.'
         );
         return;
       }
 
-      db.prepare('UPDATE users SET telegram_chat_id = ? WHERE id = ?').run(chatId, user.id);
+      await db.run('UPDATE users SET telegram_chat_id = ? WHERE id = ?', [chatId, user.id]);
 
       await sendTelegramMessage(
         chatId,
-        `✅ <b>تم ربط حسابك بنجاح يا ${escapeTgHtml(user.name)}!</b>\n\nستصلك من الآن تنبيهات فورية بالموقع الجغرافي ورابط المحادثة المباشرة بمجرد أن يمسح أي شخص أحد رموز واجد الخاصة بك.`
+        `تم ربط حسابك بنجاح يا <b>${escapeTgHtml(user.name)}</b>.\n\nستصلك من الآن تنبيهات فورية بالموقع الجغرافي ورابط المحادثة المباشرة بمجرد مسح أحد رموز واجد الخاصة بك.`
       );
     }
   } catch (err) {
@@ -91,9 +87,6 @@ async function handleTelegramUpdate(update) {
   }
 }
 
-/**
- * Register Telegram webhook (when deployed on Render with public HTTPS URL)
- */
 async function setupTelegramWebhook(appUrl) {
   if (!BOT_TOKEN || !appUrl || !appUrl.startsWith('https://')) return;
   try {
@@ -105,16 +98,13 @@ async function setupTelegramWebhook(appUrl) {
     });
     const data = await res.json();
     if (data.ok) {
-      console.log(`✈️ Telegram Webhook registered: ${webhookUrl}`);
+      console.log(`Telegram Webhook registered: ${webhookUrl}`);
     }
   } catch (err) {
     console.warn('Failed to register Telegram webhook:', err.message);
   }
 }
 
-/**
- * Optional local polling when TELEGRAM_BOT_TOKEN is set without public HTTPS
- */
 function startTelegramPolling() {
   if (!BOT_TOKEN || pollingActive) return;
   pollingActive = true;
@@ -133,9 +123,7 @@ function startTelegramPolling() {
           await handleTelegramUpdate(upd);
         }
       }
-    } catch (err) {
-      // Ignore transient network timeouts and continue
-    }
+    } catch (err) {}
     if (pollingActive) {
       setTimeout(poll, 1000);
     }
@@ -148,9 +136,8 @@ function stopTelegramPolling() {
   pollingActive = false;
 }
 
-// Notify owner about QR scan & location
 async function notifyOwnerScan(userId, itemName, lat, lng, chatUrl) {
-  const user = db.prepare('SELECT telegram_chat_id, name FROM users WHERE id = ?').get(userId);
+  const user = await db.get('SELECT telegram_chat_id, name FROM users WHERE id = ?', [userId]);
   if (!user || !user.telegram_chat_id) return;
 
   const safeName = escapeTgHtml(itemName);
@@ -158,49 +145,66 @@ async function notifyOwnerScan(userId, itemName, lat, lng, chatUrl) {
   let mapsUrl = '';
   if (lat && lng) {
     mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-    locationText = `<a href="${mapsUrl}">عرض الموقع على الخريطة 📍</a>`;
+    locationText = `<a href="${mapsUrl}">عرض الموقع على الخريطة</a>`;
   }
 
-  const message = `🚨 <b>تنبيه مسح جديد — منصة واجد</b>
+  const message = `<b>تنبيه مسح جديد — منصة واجد</b>
 
-<b>📦 الغرض:</b> ${safeName}
-<b>📍 الموقع الجغرافي:</b> ${locationText}
-<b>⏱ التوقيت:</b> ${new Date().toLocaleTimeString('ar-EG')}
+<b>الغرض:</b> ${safeName}
+<b>الموقع الجغرافي:</b> ${locationText}
+<b>التوقيت:</b> ${new Date().toLocaleTimeString('ar-EG')}
 
-<a href="${chatUrl}">💬 اضغط هنا لفتح المحادثة الفورية والرد بأمان</a>`;
+<a href="${chatUrl}">اضغط هنا لفتح المحادثة الفورية والرد بأمان</a>`;
 
   const inlineKeyboard = {
-    inline_keyboard: [
-      [{ text: '💬 فتح المحادثة الفورية', url: chatUrl }]
-    ]
+    inline_keyboard: [[{ text: 'فتح المحادثة الفورية', url: chatUrl }]]
   };
 
   if (mapsUrl) {
-    inlineKeyboard.inline_keyboard[0].unshift({ text: '📍 فتح اللوكيشن', url: mapsUrl });
+    inlineKeyboard.inline_keyboard[0].unshift({ text: 'فتح اللوكيشن', url: mapsUrl });
   }
 
   return sendTelegramMessage(user.telegram_chat_id, message, inlineKeyboard);
 }
 
-// Notify owner about new message in chat
 async function notifyOwnerMessage(userId, itemName, messageSnippet, chatUrl) {
-  const user = db.prepare('SELECT telegram_chat_id, name FROM users WHERE id = ?').get(userId);
+  const user = await db.get('SELECT telegram_chat_id, name FROM users WHERE id = ?', [userId]);
   if (!user || !user.telegram_chat_id) return;
 
   const safeName = escapeTgHtml(itemName);
   const safeSnippet = escapeTgHtml(messageSnippet.slice(0, 300));
 
-  const message = `💬 <b>رسالة جديدة — منصة واجد</b>
+  const message = `<b>رسالة جديدة — منصة واجد</b>
 
-<b>📦 الغرض:</b> ${safeName}
-<b>📩 الرسالة:</b>
+<b>الغرض:</b> ${safeName}
+<b>الرسالة:</b>
 <i>"${safeSnippet}"</i>
 
-<a href="${chatUrl}">👉 اضغط هنا للرد المباشر</a>`;
+<a href="${chatUrl}">اضغط هنا للرد المباشر</a>`;
 
   return sendTelegramMessage(user.telegram_chat_id, message, {
-    inline_keyboard: [[{ text: '💬 الرد المباشر', url: chatUrl }]]
+    inline_keyboard: [[{ text: 'الرد المباشر', url: chatUrl }]]
   });
+}
+
+async function notifyAdminsPaymentRequest(userName, planName, amount, senderAccount, adminUrl) {
+  const admins = await db.all(
+    "SELECT telegram_chat_id FROM users WHERE role IN ('super_admin', 'admin') AND telegram_chat_id IS NOT NULL"
+  );
+  if (!admins.length) return;
+
+  const message = `<b>طلب تفعيل اشتراك جديد (إنستا باي)</b>
+
+<b>المستخدم:</b> ${escapeTgHtml(userName)}
+<b>الباقة:</b> ${escapeTgHtml(planName)}
+<b>المبلغ:</b> ${amount} ج.م
+<b>حساب/رقم المحول:</b> <code>${escapeTgHtml(senderAccount)}</code>
+
+<a href="${adminUrl}">فتح لوحة التفعيل للمراجعة</a>`;
+
+  await Promise.all(
+    admins.map(a => sendTelegramMessage(a.telegram_chat_id, message))
+  );
 }
 
 module.exports = {
@@ -212,5 +216,6 @@ module.exports = {
   startTelegramPolling,
   stopTelegramPolling,
   notifyOwnerScan,
-  notifyOwnerMessage
+  notifyOwnerMessage,
+  notifyAdminsPaymentRequest
 };

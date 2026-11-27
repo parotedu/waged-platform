@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2563eb">
+  <title>لوحة تفعيل الحسابات والإدارة — واجد</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <script src="/js/lucide.min.js"></script>
+  <script src="/js/theme.js"></script>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="/" class="logo">
+        <div class="logo-icon-wrap">
+          <img src="/logo.svg" alt="شعار واجد">
+        </div>
+        <span>إدارة واجد <small class="mono" style="font-size: 12.5px; color: var(--text-muted); font-weight: 500;">Admin</small></span>
+      </a>
+      <div style="display: flex; align-items: center; gap: 10px;" id="adminNavActions">
+        <a href="/dashboard.html" class="btn btn-outline btn-sm">
+          <i data-lucide="arrow-right"></i>
+          <span>لوحة المستخدم</span>
+        </a>
+        <button id="adminLogoutBtn" onclick="handleAdminLogout()" class="btn btn-outline btn-sm" style="display: none;">
+          <i data-lucide="log-out"></i>
+          <span>خروج</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Admin Login Gate (shown when unauthenticated or non-admin) -->
+  <div id="adminLoginGate" class="container" style="display: none; padding-top: 56px; padding-bottom: 56px;">
+    <div class="card" style="max-width: 430px; margin: 0 auto; padding: 32px;">
+      <div style="text-align: center; margin-bottom: 22px;">
+        <div class="stat-icon" style="width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 14px;">
+          <i data-lucide="shield-check" style="width: 26px; height: 26px;"></i>
+        </div>
+        <h2 style="font-size: 21px; font-weight: 700;">لوحة تفعيل الحسابات</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">مخصصة للحساب الرئيسي ومسؤولي التفعيل المعتمدين فقط</p>
+      </div>
+
+      <div id="adminGateError" style="display: none; background: var(--danger-light); border: 1px solid #fecaca; color: var(--danger); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px;"></div>
+
+      <form onsubmit="handleAdminLogin(event)">
+        <div class="form-group">
+          <label class="form-label">البريد الإلكتروني</label>
+          <input type="email" class="form-control" id="adminEmailInput" required placeholder="admin@waged.app">
+        </div>
+        <div class="form-group">
+          <label class="form-label">كلمة المرور</label>
+          <input type="password" class="form-control" id="adminPassInput" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;" id="adminLoginSubmitBtn">
+          دخول لوحة التفعيل
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Admin Console -->
+  <div id="adminConsoleBody" class="container" style="display: none; padding-top: 24px; padding-bottom: 64px;">
+
+    <!-- Admin Header -->
+    <div class="dash-header">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 24px; font-weight: 700;">إدارة التفعيل والاشتراكات</h1>
+          <span id="adminRoleBadge" class="badge badge-primary"></span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 13.5px;" id="adminWelcomeSub"></p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="badge badge-neutral">
+          <i data-lucide="send"></i>
+          <span>إنستا باي: <span class="mono">01557527365</span></span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));">
+      <div class="stat-chip">
+        <div>
+          <div class="stat-label">طلبات قيد المراجعة</div>
+          <div class="stat-value" id="statPending">0</div>
+        </div>
+        <div class="stat-icon" style="color: var(--warning);"><i data-lucide="clock"></i></div>
+      </div>
+      <div class="stat-chip">
+        <div>
+          <div class="stat-label">طلبات تم تفعيلها</div>
+          <div class="stat-value" id="statApproved">0</div>
+        </div>
+        <div class="stat-icon" style="color: var(--accent);"><i data-lucide="check-circle-2"></i></div>
+      </div>
+      <div class="stat-chip">
+        <div>
+          <div class="stat-label">إجمالي المستخدمين</div>
+          <div class="stat-value" id="statTotalUsers">0</div>
+        </div>
+        <div class="stat-icon"><i data-lucide="user"></i></div>
+      </div>
+      <div class="stat-chip">
+        <div>
+          <div class="stat-label">الاشتراكات المدفوعة</div>
+          <div class="stat-value" id="statPaidUsers">0</div>
+        </div>
+        <div class="stat-icon"><i data-lucide="credit-card"></i></div>
+      </div>
+    </div>
+
+    <!-- Admin Tabs -->
+    <div class="segmented-tabs">
+      <button type="button" class="seg-btn active" id="tabReqBtn" onclick="showAdminTab('requests')">
+        <i data-lucide="credit-card"></i>
+        <span>طلبات التفعيل (<span id="pendingCountTab">0</span>)</span>
+      </button>
+      <button type="button" class="seg-btn" id="tabUsersBtn" onclick="showAdminTab('users')">
+        <i data-lucide="user"></i>
+        <span>المستخدمون</span>
+      </button>
+      <button type="button" class="seg-btn" id="tabAdminsBtn" onclick="showAdminTab('admins')" style="display: none;">
+        <i data-lucide="shield-check"></i>
+        <span>إدارة المسؤولين</span>
+      </button>
+    </div>
+
+    <!-- 1. InstaPay Activation Requests -->
+    <div id="requestsSection">
+      <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-primary btn-sm" id="filterPending" onclick="loadRequests('pending')">قيد المراجعة</button>
+        <button type="button" class="btn btn-outline btn-sm" id="filterApproved" onclick="loadRequests('approved')">مفعّلة</button>
+        <button type="button" class="btn btn-outline btn-sm" id="filterRejected" onclick="loadRequests('rejected')">مرفوضة</button>
+        <button type="button" class="btn btn-outline btn-sm" id="filterAll" onclick="loadRequests('all')">الكل</button>
+      </div>
+      <div id="requestsList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+    </div>
+
+    <!-- 2. Users Management -->
+    <div id="usersSection" style="display: none;">
+      <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+        <input type="text" class="form-control" id="userSearchInput" placeholder="ابحث بالاسم أو البريد الإلكتروني أو الهاتف..." oninput="debouncedUserSearch()" style="max-width: 380px;">
+      </div>
+      <div id="usersList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+    </div>
+
+    <!-- 3. Super Admin: Manage Activation Admins -->
+    <div id="adminsSection" style="display: none;">
+      <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px;" id="adminsLayout">
+        <div class="card">
+          <h3 style="font-size: 16.5px; font-weight: 700; margin-bottom: 14px;">المسؤولون المصرح لهم بتفعيل الحسابات</h3>
+          <div id="adminsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size: 16.5px; font-weight: 700; margin-bottom: 6px;">إضافة مسؤول تفعيل جديد</h3>
+          <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">
+            يمكنك ترقية مستخدم مسجل بإدخال بريده الإلكتروني، أو إنشاء حساب جديد لمسؤول بتعبئة الاسم وكلمة المرور.
+          </p>
+          <form onsubmit="handleAddAdmin(event)">
+            <div class="form-group">
+              <label class="form-label">البريد الإلكتروني للمسؤول</label>
+              <input type="email" class="form-control" id="newAdminEmail" required placeholder="moderator@waged.app">
+            </div>
+            <div class="form-group">
+              <label class="form-label">الاسم (مطلوب للحساب الجديد)</label>
+              <input type="text" class="form-control" id="newAdminName" placeholder="مثال: سارة علي">
+            </div>
+            <div class="form-group">
+              <label class="form-label">كلمة المرور (مطلوبة للحساب الجديد)</label>
+              <input type="password" class="form-control" id="newAdminPass" minlength="6" placeholder="6 أحرف فأكثر">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;" id="addAdminBtn">
+              <i data-lucide="plus"></i>
+              <span>إضافة مسؤول تفعيل</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Review Request Modal -->
+  <div class="modal-overlay" id="reviewModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 style="font-size: 17px; font-weight: 700;" id="reviewModalTitle">مراجعة الطلب</h3>
+        <button class="modal-close" onclick="closeReviewModal()"><i data-lucide="x"></i></button>
+      </div>
+      <form onsubmit="submitReviewDecision(event)">
+        <input type="hidden" id="reviewReqId" value="">
+        <input type="hidden" id="reviewActionType" value="approve">
+        <p id="reviewModalDesc" style="font-size: 13.5px; color: var(--text-secondary); margin-bottom: 14px;"></p>
+        <div class="form-group">
+          <label class="form-label">ملاحظة للمستخدم (اختياري)</label>
+          <input type="text" class="form-control" id="reviewAdminNote" placeholder="مثال: تم تأكيد وصول التحويل">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn btn-primary btn-sm" id="reviewConfirmBtn" style="flex: 1;">تأكيد</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="closeReviewModal()" style="flex: 1;">إلغاء</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Manual Plan Modal -->
+  <div class="modal-overlay" id="manualPlanModal">
+    <div class="modal" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3 style="font-size: 17px; font-weight: 700;" id="manualPlanTitle">تعديل باقة المستخدم</h3>
+        <button class="modal-close" onclick="closeManualPlanModal()"><i data-lucide="x"></i></button>
+      </div>
+      <form onsubmit="submitManualPlan(event)">
+        <input type="hidden" id="manualPlanUserId" value="">
+        <div class="form-group">
+          <label class="form-label">الباقة</label>
+          <select class="form-control" id="manualPlanSelect">
+            <option value="free">الباقة المجانية (Free)</option>
+            <option value="pro">الباقة الاحترافية (Pro)</option>
+            <option value="business">باقة الأعمال (Business)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">مدة التفعيل (بالأيام)</label>
+          <select class="form-control" id="manualPlanDays">
+            <option value="30">30 يوماً (شهر)</option>
+            <option value="365">365 يوماً (سنة)</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;">حفظ وتفعيل</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="closeManualPlanModal()">إلغاء</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
