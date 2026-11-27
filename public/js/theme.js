@@ -1,32 +1,18 @@
-// Shared Parot/Waged Theme Engine (Dark default with Light override)
+// Shared Waged Theme & Icon Helper (Clean White-First UI)
 (function () {
   try {
-    const saved = localStorage.getItem('waged-theme');
-    const theme = (saved === 'light' || saved === 'dark') ? saved : 'dark';
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', 'light');
   } catch (e) {}
 })();
 
-function toggleWagedTheme() {
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  try {
-    localStorage.setItem('waged-theme', next);
-  } catch (e) {}
-  updateThemeIcons();
-}
-
-function updateThemeIcons() {
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
-  document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
-    btn.textContent = current === 'dark' ? '☀️' : '🌙';
-    btn.title = current === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن';
-  });
+function refreshIcons(root) {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons(root ? { root } : undefined);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  updateThemeIcons();
+  refreshIcons();
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }

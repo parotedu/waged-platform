@@ -3,36 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#8b5cf6">
-  <title>واجد | Waged by Parot — تواصل ذكي وآمن عبر رموز QR</title>
+  <meta name="theme-color" content="#2563eb">
+  <title>واجد | Waged — تواصل ذكي وآمن عبر رموز QR</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
   <link rel="apple-touch-icon" href="/logo.svg">
+  <script src="/js/lucide.min.js"></script>
   <script src="/js/theme.js"></script>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-
-  <div class="ambient-bg">
-    <div class="ambient-orb orb-1"></div>
-    <div class="ambient-orb orb-2"></div>
-    <div class="ambient-orb orb-3"></div>
-  </div>
 
   <!-- Navigation -->
   <nav class="navbar">
     <div class="container nav-container">
       <a href="/" class="logo">
         <div class="logo-icon-wrap">
-          <img src="/logo.svg" alt="Waged Logo">
+          <img src="/logo.svg" alt="شعار واجد">
         </div>
-        <span>واجد <small class="mono brand-gradient-text" style="font-size: 13px; margin-right: 4px;">Waged</small></span>
+        <span>واجد <small class="mono" style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-right: 4px;">Waged</small></span>
       </a>
 
       <div class="nav-links">
-        <a href="#pillars" class="nav-link nav-hide-mobile">المميزات</a>
+        <a href="#steps" class="nav-link nav-hide-mobile">كيف يعمل؟</a>
         <a href="#pricing" class="nav-link nav-hide-mobile">الباقات</a>
-        <button type="button" class="icon-btn theme-toggle-btn" onclick="toggleWagedTheme()" aria-label="تغيير المظهر">☀️</button>
         <div id="navAuthLinks" style="display: flex; align-items: center; gap: 10px;">
           <a href="/login.html" class="nav-link">دخول</a>
           <a href="/login.html?tab=signup" class="btn btn-primary btn-sm">ابدأ مجاناً</a>
@@ -45,40 +39,54 @@
   <header class="hero-section">
     <div class="container hero-grid">
       <div>
-        <a href="https://parotcorp.com" target="_blank" rel="noopener" class="powered-by-pill" style="margin-bottom: 14px;">
-          <span>أحد منتجات <strong class="brand-gradient-text">PAROT</strong> • خصوصية 100%</span>
-        </a>
+        <span class="badge badge-primary" style="margin-bottom: 10px;">
+          <i data-lucide="shield-check"></i>
+          <span>خصوصية كاملة بدون كشف رقم هاتفك</span>
+        </span>
         <h1 class="hero-title">
           تواصل فوري يحفظ خصوصيتك<br>
-          <span class="brand-gradient-text">عبر رموز QR الذكية</span>
+          <span>عبر رموز QR الذكية</span>
         </h1>
         <p class="hero-desc">
-          بدل ترك رقم هاتفك على زجاج السيارة أو أجهزتك الشخصية، الصق رمز واجد. عند أي طارئ أو فقدان غرض، يمسح الشخص الكود ليرسل موقعه الجغرافي ويراسلك فوراً دون كشف هوية أي طرف.
+          بدل ترك رقم هاتفك على زجاج السيارة أو أجهزتك الشخصية، أنشئ واطبع رمز واجد في ثوانٍ. عند أي طارئ أو فقدان غرض، يمسح الشخص الكود ليرسل موقعه ويراسلك فوراً.
         </p>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-          <a href="/login.html?tab=signup" class="btn btn-primary" style="padding: 13px 28px; font-size: 15px;">
-            أنشئ رمزك الأول مجاناً
+          <a href="/login.html?tab=signup" class="btn btn-primary" style="padding: 12px 26px; font-size: 15px;">
+            <i data-lucide="qr-code"></i>
+            <span>أنشئ رمزك الأول مجاناً</span>
           </a>
-          <a href="#pricing" class="btn btn-outline" style="padding: 13px 24px; font-size: 15px;">
-            عرض الباقات
+          <a href="#steps" class="btn btn-outline" style="padding: 12px 22px; font-size: 15px;">
+            <span>كيف يعمل؟</span>
+            <i data-lucide="arrow-right" style="transform: rotate(180deg);"></i>
           </a>
         </div>
       </div>
 
-      <!-- Interactive Live Card Preview (No fake placeholder) -->
-      <div class="preview-phone">
+      <!-- Interactive Live Card Preview -->
+      <div class="preview-card">
         <div class="preview-tabs">
-          <button type="button" class="preview-tab active" onclick="switchPreview('car', this)">🚗 ركنة سيارة</button>
-          <button type="button" class="preview-tab" onclick="switchPreview('laptop', this)">💻 جهاز مفقود</button>
+          <button type="button" class="preview-tab active" onclick="switchPreview('car', this)">
+            <i data-lucide="car"></i>
+            <span>ركنة سيارة</span>
+          </button>
+          <button type="button" class="preview-tab" onclick="switchPreview('laptop', this)">
+            <i data-lucide="laptop"></i>
+            <span>جهاز مفقود</span>
+          </button>
         </div>
 
-        <div id="previewBody" style="background: var(--chat-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 16px;">
+        <div style="background: var(--bg-subtle); border: 1px solid var(--card-border); border-radius: 16px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--card-border);">
             <div style="display: flex; align-items: center; gap: 10px;">
-              <div id="prevIcon" style="width: 38px; height: 38px; border-radius: 12px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 18px;">🚗</div>
+              <div id="prevIconWrap" style="width: 38px; height: 38px; border-radius: 10px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="car"></i>
+              </div>
               <div>
                 <div id="prevTitle" style="font-weight: 700; font-size: 14px;">كيا سيراتو رمادي</div>
-                <div style="font-size: 11px; color: var(--accent);">● المالك متاح للتنبيه</div>
+                <div style="font-size: 11.5px; color: var(--accent); display: flex; align-items: center; gap: 4px;">
+                  <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i>
+                  <span>المالك متصل للتنبيه</span>
+                </div>
               </div>
             </div>
             <img src="/logo.svg" alt="Waged" width="24" height="24">
@@ -86,47 +94,61 @@
 
           <div style="margin: 14px 0; display: flex; flex-direction: column; gap: 10px;">
             <div id="prevMsg1" class="msg-bubble msg-scanner" style="font-size: 13px;">
-              لو سمحت العربية مزنقة عليا ومحتاج أتحرك 🚗
-              <div class="msg-location-card">📍 تم إرفاق الموقع (30.0444, 31.2357)</div>
+              لو سمحت سيارتك تغلق الطريق، أرجو التحريك.
+              <div class="msg-location-card">
+                <i data-lucide="map-pin" style="width: 14px; height: 14px; color: var(--primary);"></i>
+                <span>تم إرفاق الموقع الجغرافي (30.0444, 31.2357)</span>
+              </div>
             </div>
             <div id="prevMsg2" class="msg-bubble msg-owner" style="font-size: 13px;">
-              أهلاً بحضرتك، وصلني التنبيه ونازل خلال دقيقة!
+              أهلاً بحضرتك، وصلني التنبيه ونازل خلال دقيقة.
             </div>
           </div>
 
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted); padding-top: 8px; border-top: 1px solid var(--card-border);">
-            <span>🔒 محادثة مشفرة ومجهولة</span>
-            <span>✈️ إشعار تليجرام فوري</span>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--text-muted); padding-top: 10px; border-top: 1px solid var(--card-border);">
+            <span style="display: inline-flex; align-items: center; gap: 5px;">
+              <i data-lucide="lock" style="width: 13px; height: 13px;"></i>
+              <span>محادثة مشفرة ومجهولة</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 5px;">
+              <i data-lucide="send" style="width: 13px; height: 13px;"></i>
+              <span>إشعار فوري على تليجرام</span>
+            </span>
           </div>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- 3 Focused Pillars -->
-  <section class="container" id="pillars">
-    <div class="pillars-grid">
-      <div class="card pillar-card">
-        <div class="pillar-icon">🛡️</div>
-        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">هوية محمية 100%</h3>
-        <p style="color: var(--text-muted); font-size: 14px;">
-          لا يظهر رقم هاتفك أو بريدك الإلكتروني أو اسمك الحقيقي لأي شخص يمسح الرمز.
+  <!-- 3 Simple Steps -->
+  <section class="container" id="steps">
+    <div style="text-align: center; margin-top: 48px; margin-bottom: 12px;">
+      <span class="badge badge-neutral">ثلاث خطوات بسيطة</span>
+      <h2 style="font-size: 28px; font-weight: 700; margin-top: 10px;">سهولة الاستخدام من اللحظة الأولى</h2>
+    </div>
+
+    <div class="pillars-grid" style="margin-top: 28px;">
+      <div class="pillar-card">
+        <div class="pillar-icon"><i data-lucide="plus"></i></div>
+        <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">1. أنشئ رمزاً لغرضك</h3>
+        <p style="color: var(--text-muted); font-size: 13.5px;">
+          اختر الفئة (سيارة، لابتوب، حقيبة، مفاتيح) وأنشئ رمز QR مخصصاً خلال ثوانٍ.
         </p>
       </div>
 
-      <div class="card pillar-card">
-        <div class="pillar-icon">📍</div>
-        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">موقع جغرافي وربط فوري</h3>
-        <p style="color: var(--text-muted); font-size: 14px;">
-          يلتقط إحداثيات المكان بموافقة الزائر ويرسل لك إشعاراً فورياً عبر تليجرام أو المتصفح مع رابط الخريطة.
+      <div class="pillar-card">
+        <div class="pillar-icon"><i data-lucide="printer"></i></div>
+        <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">2. اطبع الملصق والصقه</h3>
+        <p style="color: var(--text-muted); font-size: 13.5px;">
+          اطبع الملصق الجاهز بدقة عالية من المتصفح وضعه على زجاج السيارة أو أجهزتك.
         </p>
       </div>
 
-      <div class="card pillar-card">
-        <div class="pillar-icon">🖨️</div>
-        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">ملصقات جاهزة للطباعة</h3>
-        <p style="color: var(--text-muted); font-size: 14px;">
-          استوديو طباعة مدمج يولد ملصقات Vector دقيقة للسيارات، اللابتوب، الحقائب، والمفاتيح.
+      <div class="pillar-card">
+        <div class="pillar-icon"><i data-lucide="message-square"></i></div>
+        <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">3. استقبل التنبيهات فوراً</h3>
+        <p style="color: var(--text-muted); font-size: 13.5px;">
+          عند مسح الرمز، يراسلك الزائر بسرية مع إمكانية إرسال موقعه الجغرافي ويصلك إشعار على تليجرام.
         </p>
       </div>
     </div>
@@ -137,7 +159,7 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
       <div>
         <span class="badge badge-primary" style="margin-bottom: 8px;">الباقات والاشتراكات</span>
-        <h2 style="font-size: 30px; font-weight: 700;">اختر ما يناسب احتياجك</h2>
+        <h2 style="font-size: 28px; font-weight: 700;">خطط واضحة تناسب الجميع</h2>
       </div>
       <div class="segmented-tabs" style="margin-bottom: 0;">
         <button type="button" class="seg-btn active" id="landMonthlyBtn" onclick="setLandingCycle('monthly')">شهري</button>
@@ -153,11 +175,11 @@
     <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
       <div style="display: flex; align-items: center; gap: 8px;">
         <img src="/logo.svg" alt="Waged" width="22" height="22">
-        <span><strong>واجد (Waged)</strong> — أحد حلول <a href="https://parotcorp.com" target="_blank" rel="noopener" class="brand-gradient-text">PAROT Corp</a> © 2026</span>
+        <span><strong>واجد (Waged)</strong> — أحد حلول <a href="https://parotcorp.com" target="_blank" rel="noopener" style="color: var(--primary); font-weight: 600;">PAROT Corp</a> © 2026</span>
       </div>
       <div style="display: flex; gap: 18px; font-size: 13px;">
         <a href="https://near.parotcorp.com" target="_blank" rel="noopener" class="nav-link">P-Near للموقع المباشر</a>
-        <a href="/login.html" class="nav-link">لوحة التحكم</a>
+        <a href="/login.html" class="nav-link">تسجيل الدخول</a>
       </div>
     </div>
   </footer>
@@ -169,17 +191,19 @@
     function switchPreview(mode, btn) {
       document.querySelectorAll('.preview-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      const iconWrap = document.getElementById('prevIconWrap');
       if (mode === 'car') {
-        document.getElementById('prevIcon').textContent = '🚗';
+        iconWrap.innerHTML = '<i data-lucide="car"></i>';
         document.getElementById('prevTitle').textContent = 'كيا سيراتو رمادي';
-        document.getElementById('prevMsg1').innerHTML = 'لو سمحت العربية مزنقة عليا ومحتاج أتحرك 🚗<div class="msg-location-card">📍 تم إرفاق الموقع (30.0444, 31.2357)</div>';
-        document.getElementById('prevMsg2').textContent = 'أهلاً بحضرتك، وصلني التنبيه ونازل خلال دقيقة!';
+        document.getElementById('prevMsg1').innerHTML = 'لو سمحت سيارتك تغلق الطريق، أرجو التحريك.<div class="msg-location-card"><i data-lucide="map-pin" style="width:14px;height:14px;color:var(--primary);"></i><span>تم إرفاق الموقع الجغرافي (30.0444, 31.2357)</span></div>';
+        document.getElementById('prevMsg2').textContent = 'أهلاً بحضرتك، وصلني التنبيه ونازل خلال دقيقة.';
       } else {
-        document.getElementById('prevIcon').textContent = '💻';
+        iconWrap.innerHTML = '<i data-lucide="laptop"></i>';
         document.getElementById('prevTitle').textContent = 'MacBook Pro — غرض مفقود';
-        document.getElementById('prevMsg1').innerHTML = 'لقيت اللابتوب في الكافيه وهو في أمان معايا 💼<div class="msg-location-card">📍 تم إرفاق الموقع (30.0626, 31.3452)</div>';
-        document.getElementById('prevMsg2').textContent = 'شكراً جزيلاً لأمانتك! أنا في الطريق للاستلام الآن.';
+        document.getElementById('prevMsg1').innerHTML = 'وجدت هذا اللابتوب وهو في أمان معي لتسليمه.<div class="msg-location-card"><i data-lucide="map-pin" style="width:14px;height:14px;color:var(--primary);"></i><span>تم إرفاق الموقع الجغرافي (30.0626, 31.3452)</span></div>';
+        document.getElementById('prevMsg2').textContent = 'شكراً جزيلاً لأمانتك، أنا في الطريق للاستلام الآن.';
       }
+      refreshIcons();
     }
 
     function setLandingCycle(cycle) {
@@ -200,23 +224,24 @@
           <div class="card pricing-card ${isPro ? 'featured' : ''}">
             <div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="font-size: 19px; font-weight: 700;">${plan.name}</h3>
-                <span class="badge ${isPro ? 'badge-primary' : 'badge-success'}">${plan.badge}</span>
+                <h3 style="font-size: 18px; font-weight: 700;">${plan.name}</h3>
+                <span class="badge ${isPro ? 'badge-primary' : 'badge-neutral'}">${plan.badge}</span>
               </div>
               <div class="pricing-price">
-                ${price === 0 ? 'مجاناً' : `${price} <span style="font-size:16px;">${plan.currency}</span>`}
+                ${price === 0 ? 'مجاناً' : `${price} <span style="font-size:15px;">${plan.currency}</span>`}
                 ${price > 0 ? `<span>${unit}</span>` : ''}
               </div>
               <ul class="pricing-features">
-                ${plan.features.map(f => `<li>✓ <span>${f}</span></li>`).join('')}
+                ${plan.features.map(f => `<li><i data-lucide="check" style="color: var(--accent);"></i><span>${f}</span></li>`).join('')}
               </ul>
             </div>
-            <a href="/login.html?tab=signup&plan=${plan.id}" class="btn ${isPro ? 'btn-primary' : 'btn-outline'}" style="width: 100%; padding: 12px;">
+            <a href="/login.html?tab=signup&plan=${plan.id}" class="btn ${isPro ? 'btn-primary' : 'btn-outline'}" style="width: 100%; padding: 11px;">
               ${price === 0 ? 'ابدأ مجاناً' : 'اشترك الآن'}
             </a>
           </div>
         `;
       }).join('');
+      refreshIcons(grid);
     }
 
     fetch('/api/auth/me')
@@ -224,8 +249,12 @@
       .then(data => {
         if (data && data.user) {
           document.getElementById('navAuthLinks').innerHTML = `
-            <a href="/dashboard.html" class="btn btn-primary btn-sm">لوحة التحكم (${data.user.name})</a>
+            <a href="/dashboard.html" class="btn btn-primary btn-sm">
+              <i data-lucide="user"></i>
+              <span>لوحة التحكم (${data.user.name})</span>
+            </a>
           `;
+          refreshIcons(document.getElementById('navAuthLinks'));
         }
       }).catch(() => {});
 

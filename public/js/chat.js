@@ -22,7 +22,7 @@ function showToast(msg, type = 'info') {
 document.addEventListener('DOMContentLoaded', async () => {
   if (!publicCode) {
     document.getElementById('itemHeaderTitle').textContent = 'رمز غير صالح';
-    document.getElementById('chatMessages').innerHTML = '<div style="color: #f87171; text-align: center; margin: auto;">لم يتم تحديد رمز QR صالح.</div>';
+    document.getElementById('chatMessages').innerHTML = '<div style="color: var(--danger); text-align: center; margin: auto;">لم يتم تحديد رمز QR صالح.</div>';
     return;
   }
 
@@ -47,14 +47,16 @@ async function fetchItemInfo() {
 
     document.getElementById('itemHeaderTitle').textContent = itemInfo.name;
     const catIcons = {
-      car: '🚗',
-      laptop: '💻',
-      bag: '💼',
-      keys: '🔑',
-      pet: '🐾',
-      other: '📦'
+      car: 'car',
+      laptop: 'laptop',
+      bag: 'briefcase',
+      keys: 'key-round',
+      pet: 'tag',
+      other: 'package'
     };
-    document.getElementById('itemAvatar').textContent = catIcons[itemInfo.category] || '📦';
+    const avatar = document.getElementById('itemAvatar');
+    avatar.innerHTML = `<i data-lucide="${catIcons[itemInfo.category] || 'package'}"></i>`;
+    refreshIcons(avatar);
 
     if (itemInfo.status === 'lost') {
       document.getElementById('lostBanner').style.display = 'flex';
@@ -65,26 +67,17 @@ async function fetchItemInfo() {
       document.getElementById('ownerMsgCard').style.display = 'block';
     }
 
-    renderQuickReplies(itemInfo.category);
-
-    const hasPromptedLocation = sessionStorage.getItem(`geo_prompted_${publicCode}`);
-    if (itemInfo.require_location && !hasPromptedLocation) {
-      document.getElementById('chatMessages').style.display = 'none';
-      document.getElementById('geoStep').style.display = 'block';
-    } else {
-      await recordScanAndStartChat();
+    if (itemInfo.require_location) {
+      document.getElementById('shareLocationBtn').style.display = 'inline-flex';
     }
+
+    renderQuickReplies(itemInfo.category);
+    // Open chat immediately with zero friction
+    await recordScanAndStartChat();
   } catch (err) {
     document.getElementById('itemHeaderTitle').textContent = 'تنبيه';
-    document.getElementById('chatMessages').innerHTML = `<div style="color: #f87171; text-align: center; margin: auto;">${escapeHtml(err.message)}</div>`;
+    document.getElementById('chatMessages').innerHTML = `<div style="color: var(--danger); text-align: center; margin: auto;">${escapeHtml(err.message)}</div>`;
   }
-}
-
-function revealChatUI() {
-  document.getElementById('geoStep').style.display = 'none';
-  document.getElementById('chatMessages').style.display = 'flex';
-  document.getElementById('quickReplies').style.display = 'flex';
-  document.getElementById('chatForm').style.display = 'flex';
 }
 
 function renderQuickReplies(cat) {
@@ -93,22 +86,22 @@ function renderQuickReplies(cat) {
 
   if (cat === 'car') {
     replies = [
-      'العربية مزنقة عليا 🚗',
-      'أنا واقف جنب العربية ⏳',
-      'أرجو التحرك لو سمحت ⚠️',
-      'شكراً جزيلاً لحضرتك 👍'
+      'سيارتك تغلق الطريق، أرجو التحريك',
+      'أنا متواجد عند السيارة الآن',
+      'يرجى التواصل للأهمية',
+      'شكراً لتعاونك'
     ];
   } else if (cat === 'laptop' || cat === 'bag' || cat === 'keys') {
     replies = [
-      'لقيت الغرض وهو في أمان معايا 💼',
-      'أنا متواجد في نفس المكان 📍',
-      'كيف يمكنني تسليمه لك بأمان؟ 🤝'
+      'وجدت الغرض وهو في أمان معي',
+      'أنا متواجد في نفس المكان الآن',
+      'كيف يمكنني تسليمه لك؟'
     ];
   } else {
     replies = [
-      'مرحباً، قمت بمسح رمز الـ QR الخاص بك 👋',
-      'أرجو التواصل معي للأهمية ⚠️',
-      'أنا في موقع الغرض الآن 📍'
+      'مرحباً، قمت بمسح رمز الـ QR الخاص بك',
+      'أرجو التواصل معي للأهمية',
+      'أنا في موقع الغرض الآن'
     ];
   }
 
@@ -126,47 +119,15 @@ function renderQuickReplies(cat) {
   });
 }
 
-async function grantLocation() {
-  const btn = document.getElementById('grantGeoBtn');
-  btn.disabled = true;
-  btn.textContent = 'جاري تحديد موقعك...';
-
-  if (!navigator.geolocation) {
-    showToast('متصفحك لا يدعم تحديد الموقع الجغرافي', 'warning');
-    skipLocation();
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    async (pos) => {
-      userCoords = {
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        accuracy: pos.coords.accuracy
-      };
-      sessionStorage.setItem(`geo_prompted_${publicCode}`, '1');
-      document.getElementById('locationBadge').style.display = 'inline';
-      await recordScanAndStartChat();
-    },
-    () => {
-      sessionStorage.setItem(`geo_prompted_${publicCode}`, '1');
-      recordScanAndStartChat();
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
-}
-
-function skipLocation() {
-  sessionStorage.setItem(`geo_prompted_${publicCode}`, '1');
-  recordScanAndStartChat();
-}
-
 async function sendLiveLocationPin() {
+  const btn = document.getElementById('shareLocationBtn');
   if (!navigator.geolocation || !currentChatId) {
     showToast('تعذر الوصول للموقع الجغرافي في هذا المتصفح', 'error');
     return;
   }
+  if (btn) btn.disabled = true;
   showToast('جاري تحديد موقعك لإرساله...', 'info');
+
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       userCoords = {
@@ -174,26 +135,51 @@ async function sendLiveLocationPin() {
         longitude: pos.coords.longitude,
         accuracy: pos.coords.accuracy
       };
-      document.getElementById('locationBadge').style.display = 'inline';
+
+      // Also update scan record with coordinates
+      await fetch('/api/scan/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: publicCode,
+          sessionId: userSessionId,
+          latitude: userCoords.latitude,
+          longitude: userCoords.longitude,
+          accuracy: userCoords.accuracy
+        })
+      });
+
       await fetch(`/api/chat/${currentChatId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: '📍 قمت بمشاركة موقعي الجغرافي الحالي معك',
+          message: 'تم إرسال موقعي الجغرافي الحالي للمساعدة',
           sessionId: userSessionId,
           lat: userCoords.latitude,
           lng: userCoords.longitude
         })
       });
+
+      if (btn) {
+        btn.innerHTML = '<i data-lucide="check"></i><span>تم إرسال الموقع</span>';
+        btn.className = 'btn btn-soft btn-sm';
+        refreshIcons(btn);
+      }
       showToast('تم إرسال موقعك للمالك بنجاح', 'success');
     },
-    () => showToast('يرجى السماح بصلاحية الموقع من المتصفح', 'warning'),
+    () => {
+      if (btn) btn.disabled = false;
+      showToast('يرجى السماح بصلاحية الموقع من المتصفح', 'warning');
+    },
     { enableHighAccuracy: true, timeout: 10000 }
   );
 }
 
 async function recordScanAndStartChat() {
-  revealChatUI();
+  document.getElementById('quickReplies').style.display = 'flex';
+  document.getElementById('chatForm').style.display = 'flex';
+  refreshIcons();
+
   try {
     const payload = {
       code: publicCode,
@@ -267,7 +253,7 @@ async function loadChatMessages() {
 
     const messages = data.messages || [];
     if (messages.length === 0) {
-      box.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin: auto;">ابدأ المحادثة الآن بكتابة رسالة أدناه.</div>';
+      box.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin: auto;">ابدأ المحادثة الآن بكتابة رسالة أدناه أو اختيار رد سريع.</div>';
       return;
     }
 
@@ -294,8 +280,9 @@ function appendChatMessage(msg, autoScroll = true) {
     const mapUrl = `https://www.google.com/maps?q=${msg.lat},${msg.lng}`;
     locationHtml = `
       <div class="msg-location-card">
-        📍 <strong>موقع المسح:</strong>
-        <a href="${mapUrl}" target="_blank" rel="noopener" style="color: #93c5fd; text-decoration: underline; margin-right: 6px;">
+        <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+        <strong>الموقع:</strong>
+        <a href="${mapUrl}" target="_blank" rel="noopener" style="text-decoration: underline; margin-right: 4px;">
           فتح الخريطة
         </a>
       </div>
@@ -310,6 +297,7 @@ function appendChatMessage(msg, autoScroll = true) {
   `;
 
   box.appendChild(div);
+  refreshIcons(div);
   if (autoScroll) {
     box.scrollTop = box.scrollHeight;
   }

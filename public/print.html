@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>استوديو طباعة الملصقات — واجد</title>
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <script src="/js/lucide.min.js"></script>
   <link rel="stylesheet" href="/css/print.css">
 </head>
 <body>
@@ -14,16 +15,18 @@
       <div style="display: flex; align-items: center; gap: 12px;">
         <img src="/logo.svg" alt="Waged" width="32" height="32">
         <div>
-          <h2 style="font-size: 18px; font-weight: 700; margin: 0 0 2px;">استوديو طباعة ملصقات واجد</h2>
-          <p style="color: #94a3b8; font-size: 12.5px; margin: 0;">صمّم واطبع ملصقك بدقة Vector عالية الوضوح</p>
+          <h2 style="font-size: 17px; font-weight: 700; margin: 0 0 2px;">استوديو طباعة ملصقات واجد</h2>
+          <p style="color: #64748b; font-size: 12.5px; margin: 0;">صمّم واطبع ملصقك بدقة Vector عالية الوضوح</p>
         </div>
       </div>
       <div style="display: flex; gap: 10px; align-items: center;">
-        <button onclick="window.print()" style="background: linear-gradient(135deg, #8b5cf6, #ec4899, #3b82f6); color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 13.5px;">
-          🖨️ طباعة / حفظ PDF
+        <button onclick="window.print()" style="background: #2563eb; color: #fff; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-family: inherit; cursor: pointer; font-size: 13.5px; display: inline-flex; align-items: center; gap: 7px;">
+          <i data-lucide="printer"></i>
+          <span>طباعة / حفظ PDF</span>
         </button>
-        <a href="/dashboard.html" style="color: #cbd5e1; font-size: 13px; font-weight: 600; text-decoration: none; padding: 9px 14px; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px;">
-          ← لوحة التحكم
+        <a href="/dashboard.html" style="color: #334155; font-size: 13px; font-weight: 600; text-decoration: none; padding: 9px 14px; border: 1px solid #cbd5e1; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; background: #fff;">
+          <i data-lucide="arrow-right"></i>
+          <span>لوحة التحكم</span>
         </a>
       </div>
     </div>
@@ -32,20 +35,20 @@
       <div class="control-field">
         <label>نوع القالب</label>
         <select id="stickerType" onchange="renderStickers()">
-          <option value="car">🚗 ملصق زجاج السيارة</option>
-          <option value="device">💻 ملصق لابتوب وأجهزة</option>
-          <option value="bag">💼 بطاقة حقائب وأمتعة</option>
-          <option value="mini">🏷️ ملصق مصغر للمفاتيح</option>
+          <option value="car">ملصق زجاج السيارة</option>
+          <option value="device">ملصق لابتوب وأجهزة</option>
+          <option value="bag">بطاقة حقائب وأمتعة</option>
+          <option value="mini">ملصق مصغر للمفاتيح</option>
         </select>
       </div>
 
       <div class="control-field">
-        <label>الهوية اللونية</label>
+        <label>لون التصميم</label>
         <select id="stickerTheme" onchange="renderStickers()">
-          <option value="parot">🟣 هوية واجد (Parot Midnight)</option>
-          <option value="dark">⚫ أسود رسمي</option>
-          <option value="amber">🟡 تحذيري (أصفر / أسود)</option>
-          <option value="emerald">🟢 أخضر أمان</option>
+          <option value="blue">أزرق واجد الكلاسيكي</option>
+          <option value="dark">أسود رسمي</option>
+          <option value="amber">تحذيري (أصفر / أسود)</option>
+          <option value="emerald">أخضر أمان</option>
         </select>
       </div>
 
@@ -54,8 +57,8 @@
         <select id="sheetCount" onchange="renderStickers()">
           <option value="1">ملصق واحد (1x)</option>
           <option value="2">ملصقان (2x)</option>
-          <option value="4" selected>4 ملصقات (4x)</option>
-          <option value="6">6 ملصقات (6x)</option>
+          <option value="4" selected>4 ملصقات (2x2)</option>
+          <option value="6">6 ملصقات (3x2)</option>
         </select>
       </div>
 
@@ -70,7 +73,7 @@
   </div>
 
   <div class="sheet-container" id="sheetContainer">
-    <div style="text-align: center; padding: 50px; color: #94a3b8;">جاري تحضير استوديو الطباعة...</div>
+    <div style="text-align: center; padding: 50px; color: #64748b; grid-column: 1/-1;">جاري تحضير استوديو الطباعة...</div>
   </div>
 
   <script>
@@ -78,9 +81,13 @@
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
 
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) window.lucide.createIcons();
+    });
+
     async function loadItemData() {
       if (!code) {
-        document.getElementById('sheetContainer').innerHTML = '<div style="color: #f87171; text-align: center; font-weight: 700;">رمز الكود غير محدد في الرابط</div>';
+        document.getElementById('sheetContainer').innerHTML = '<div style="color: #dc2626; text-align: center; font-weight: 700; grid-column: 1/-1;">رمز الكود غير محدد في الرابط</div>';
         return;
       }
 
@@ -96,7 +103,7 @@
 
         renderStickers();
       } catch (err) {
-        document.getElementById('sheetContainer').innerHTML = `<div style="color: #f87171; text-align: center; font-weight: 700;">${escapeHtml(err.message)}</div>`;
+        document.getElementById('sheetContainer').innerHTML = `<div style="color: #dc2626; text-align: center; font-weight: 700; grid-column: 1/-1;">${escapeHtml(err.message)}</div>`;
       }
     }
 
@@ -117,22 +124,27 @@
 
       let instruction = '';
       let tagTitle = '';
+      let tagIcon = 'shield-check';
       let subnote = '';
 
       if (type === 'car') {
-        tagTitle = '🚗 تنبيه سيارة';
-        instruction = 'العربية مزنقة عليك أو في أي طارئ؟<br><strong>امسح الرمز للتواصل المباشر مع السائق</strong>';
+        tagTitle = 'تنبيه سيارة';
+        tagIcon = 'car';
+        instruction = 'هل السيارة تغلق الطريق أو في أي طارئ؟<br><strong>امسح الرمز للتواصل المباشر مع السائق</strong>';
         subnote = 'محادثة فورية وسرية 100% دون كشف رقم الهاتف';
       } else if (type === 'device') {
-        tagTitle = '💻 جهاز محمي';
+        tagTitle = 'جهاز محمي';
+        tagIcon = 'laptop';
         instruction = 'إذا عثرت على هذا الجهاز، نرجو مسح الرمز<br><strong>لمراسلة المالك وإرسال الموقع لتسليمه</strong>';
         subnote = 'تواصل آمن ومشفر بالكامل عبر منصة واجد';
       } else if (type === 'bag') {
-        tagTitle = '💼 بطاقة أمتعة';
+        tagTitle = 'بطاقة أمتعة';
+        tagIcon = 'briefcase';
         instruction = 'حقيبة / مقتنيات شخصية محمية<br><strong>امسح الرمز للتواصل الفوري مع المالك</strong>';
         subnote = 'لا يتم مشاركة أي بيانات شخصية عند المسح';
       } else {
-        tagTitle = '🛡️ محمي بواجد';
+        tagTitle = 'محمي بواجد';
+        tagIcon = 'tag';
         instruction = '<strong>امسح الرمز للتواصل الآمن مع المالك</strong>';
         subnote = 'محادثة فورية مشفرة';
       }
@@ -148,9 +160,12 @@
               <div class="sticker-brand">
                 <img src="/logo.svg" alt="Waged" width="22" height="22">
                 <span>واجد</span>
-                <small style="font-size: 10px; opacity: 0.75; font-family: Outfit, sans-serif;">WAGED</small>
+                <small style="font-size: 10px; opacity: 0.78; font-family: Inter, sans-serif;">WAGED</small>
               </div>
-              <div class="sticker-tag">${tagTitle}</div>
+              <div class="sticker-tag">
+                <i data-lucide="${tagIcon}"></i>
+                <span>${tagTitle}</span>
+              </div>
             </div>
 
             ${showName ? `<div class="sticker-item-name">${escapeHtml(itemData.name)}</div>` : ''}
@@ -163,15 +178,16 @@
             <div class="sticker-subnote">${subnote}</div>
 
             <div class="sticker-footer">
-              <span>🛡️ خصوصية 100%</span>
-              <span style="font-family: Outfit, sans-serif;">${escapeHtml(hostLabel)}</span>
+              <span><i data-lucide="shield-check" style="width:12px;height:12px;"></i> خصوصية 100%</span>
+              <span style="font-family: Inter, sans-serif;">${escapeHtml(hostLabel)}</span>
             </div>
-            <span class="cut-hint">✂️ قص على الحدود المنقطة</span>
+            <span class="cut-hint"><i data-lucide="scissors" style="width:12px;height:12px;"></i> قص على الحدود المنقطة</span>
           </div>
         `;
       }
 
       container.innerHTML = cardsHtml;
+      if (window.lucide) window.lucide.createIcons({ root: container });
     }
 
     function escapeHtml(str) {

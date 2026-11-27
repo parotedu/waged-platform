@@ -3,15 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#8b5cf6">
+  <meta name="theme-color" content="#2563eb">
   <title>تسجيل الدخول / حساب جديد — واجد</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <script src="/js/lucide.min.js"></script>
   <script src="/js/theme.js"></script>
   <link rel="stylesheet" href="/css/style.css">
   <style>
+    body {
+      background: var(--bg-subtle);
+    }
     .auth-shell {
-      min-height: calc(100vh - 70px);
+      min-height: calc(100vh - 68px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -19,90 +23,88 @@
     }
     .auth-card {
       width: 100%;
-      max-width: 440px;
+      max-width: 430px;
       padding: 32px;
       border-radius: var(--radius-xl);
+      background: #ffffff;
     }
     .auth-tabs {
       display: flex;
-      gap: 6px;
-      background: var(--btn-sec-bg);
+      gap: 4px;
+      background: var(--bg-muted);
       border: 1px solid var(--card-border);
-      padding: 5px;
-      border-radius: 12px;
+      padding: 4px;
+      border-radius: 10px;
       margin-bottom: 22px;
     }
     .auth-tab {
       flex: 1;
       text-align: center;
       padding: 9px;
-      border-radius: 9px;
+      border-radius: 7px;
       font-weight: 600;
-      font-size: 14px;
+      font-size: 13.5px;
       color: var(--text-muted);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.16s;
     }
     .auth-tab.active {
-      background: var(--parot-gradient);
-      color: #ffffff;
+      background: #ffffff;
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
     }
     .pass-wrap {
       position: relative;
     }
     .pass-toggle {
       position: absolute;
-      left: 12px;
+      left: 10px;
       top: 50%;
       transform: translateY(-50%);
       background: none;
       border: none;
       color: var(--text-muted);
       cursor: pointer;
-      font-size: 15px;
+      display: flex;
+      align-items: center;
+      padding: 4px;
     }
     .alert-error {
       background: var(--danger-light);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #fca5a5;
-      padding: 11px 14px;
+      border: 1px solid #fecaca;
+      color: var(--danger);
+      padding: 10px 14px;
       border-radius: var(--radius-sm);
       margin-bottom: 16px;
-      font-size: 13.5px;
+      font-size: 13px;
       display: none;
     }
-    [data-theme="light"] .alert-error { color: #991b1b; }
   </style>
 </head>
 <body>
-
-  <div class="ambient-bg">
-    <div class="ambient-orb orb-1"></div>
-    <div class="ambient-orb orb-2"></div>
-  </div>
 
   <nav class="navbar">
     <div class="container nav-container">
       <a href="/" class="logo">
         <div class="logo-icon-wrap">
-          <img src="/logo.svg" alt="Waged Logo">
+          <img src="/logo.svg" alt="شعار واجد">
         </div>
-        <span>واجد <small class="mono brand-gradient-text" style="font-size: 13px;">Waged</small></span>
+        <span>واجد <small class="mono" style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Waged</small></span>
       </a>
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <button type="button" class="icon-btn theme-toggle-btn" onclick="toggleWagedTheme()" aria-label="تغيير المظهر">☀️</button>
-        <a href="/" class="btn btn-outline btn-sm">الرئيسية</a>
-      </div>
+      <a href="/" class="btn btn-outline btn-sm">
+        <i data-lucide="arrow-right"></i>
+        <span>الرئيسية</span>
+      </a>
     </div>
   </nav>
 
   <main class="auth-shell">
     <div class="card auth-card">
       <div style="text-align: center; margin-bottom: 22px;">
-        <div class="logo-icon-wrap" style="width: 60px; height: 60px; margin: 0 auto 12px; border-radius: 18px;">
+        <div class="logo-icon-wrap" style="width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 14px;">
           <img src="/logo.svg" alt="Waged">
         </div>
-        <h2 style="font-size: 24px; font-weight: 700;">مرحباً بك في <span class="brand-gradient-text">واجد</span></h2>
+        <h2 style="font-size: 22px; font-weight: 700;">مرحباً بك في واجد</h2>
         <p style="color: var(--text-muted); font-size: 13.5px; margin-top: 4px;">إدارة رموز الـ QR والتواصل الفوري المشفر</p>
       </div>
 
@@ -122,8 +124,10 @@
         <div class="form-group">
           <label class="form-label">كلمة المرور</label>
           <div class="pass-wrap">
-            <input type="password" class="form-control" id="loginPassword" required placeholder="••••••••" autocomplete="current-password" style="padding-left: 40px;">
-            <button type="button" class="pass-toggle" onclick="togglePass('loginPassword', this)">👁️</button>
+            <input type="password" class="form-control" id="loginPassword" required placeholder="••••••••" autocomplete="current-password" style="padding-left: 38px;">
+            <button type="button" class="pass-toggle" onclick="togglePass('loginPassword', this)" aria-label="إظهار كلمة المرور">
+              <i data-lucide="eye"></i>
+            </button>
           </div>
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;" id="loginBtn">
@@ -148,8 +152,10 @@
         <div class="form-group">
           <label class="form-label">كلمة المرور</label>
           <div class="pass-wrap">
-            <input type="password" class="form-control" id="signupPassword" required minlength="6" placeholder="6 أحرف فأكثر" autocomplete="new-password" style="padding-left: 40px;">
-            <button type="button" class="pass-toggle" onclick="togglePass('signupPassword', this)">👁️</button>
+            <input type="password" class="form-control" id="signupPassword" required minlength="6" placeholder="6 أحرف فأكثر" autocomplete="new-password" style="padding-left: 38px;">
+            <button type="button" class="pass-toggle" onclick="togglePass('signupPassword', this)" aria-label="إظهار كلمة المرور">
+              <i data-lucide="eye"></i>
+            </button>
           </div>
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;" id="signupBtn">
@@ -163,7 +169,6 @@
     const params = new URLSearchParams(window.location.search);
     const selectedPlan = params.get('plan');
 
-    // Auto-redirect if already authenticated
     fetch('/api/auth/me')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
@@ -183,7 +188,8 @@
       const inp = document.getElementById(id);
       const isHidden = inp.type === 'password';
       inp.type = isHidden ? 'text' : 'password';
-      btn.textContent = isHidden ? '🙈' : '👁️';
+      btn.innerHTML = `<i data-lucide="${isHidden ? 'eye-off' : 'eye'}"></i>`;
+      refreshIcons(btn);
     }
 
     function switchTab(tab) {

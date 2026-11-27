@@ -3,111 +3,104 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#8b5cf6">
+  <meta name="theme-color" content="#2563eb">
   <title>واجد | تواصل فوري وآمن</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <script src="/js/lucide.min.js"></script>
   <script src="/js/theme.js"></script>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
   <style>
+    body {
+      background: var(--bg-subtle);
+    }
     .scanner-shell {
       display: flex;
       flex-direction: column;
-      max-width: 600px;
+      max-width: 580px;
       margin: 0 auto;
       width: 100%;
       height: 100vh;
       height: 100dvh;
-      background: var(--card-bg);
-      backdrop-filter: blur(22px);
+      background: #ffffff;
       border-left: 1px solid var(--card-border);
       border-right: 1px solid var(--card-border);
     }
     .scanner-header {
-      padding: 14px 18px;
+      padding: 13px 18px;
       border-bottom: 1px solid var(--card-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: var(--nav-bg);
+      background: #ffffff;
     }
-    .geo-card {
-      margin: 18px;
-      padding: 24px 20px;
-      text-align: center;
-      border-radius: var(--radius-lg);
+    .location-bar {
       background: var(--primary-light);
-      border: 1px solid rgba(139, 92, 246, 0.35);
+      border-bottom: 1px solid var(--primary-border);
+      padding: 9px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
     }
   </style>
 </head>
 <body>
 
-  <div class="ambient-bg">
-    <div class="ambient-orb orb-1"></div>
-    <div class="ambient-orb orb-2"></div>
-  </div>
-
   <div class="scanner-shell">
-    <!-- Top Header -->
+    <!-- Header -->
     <div class="scanner-header">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <div class="logo-icon-wrap" id="itemAvatar" style="font-size: 18px;">🚗</div>
+        <div class="logo-icon-wrap" id="itemAvatar" style="color: var(--primary);">
+          <i data-lucide="car"></i>
+        </div>
         <div>
-          <h2 style="font-size: 16px; font-weight: 700;" id="itemHeaderTitle">جاري التحميل...</h2>
-          <span style="font-size: 11.5px; color: var(--accent); font-weight: 600;">● المالك متصل للتنبيه</span>
+          <h2 style="font-size: 15.5px; font-weight: 700;" id="itemHeaderTitle">جاري التحميل...</h2>
+          <span style="font-size: 11.5px; color: var(--accent); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+            <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i>
+            <span>المالك متصل للتنبيه الفوري</span>
+          </span>
         </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <button type="button" class="icon-btn theme-toggle-btn" onclick="toggleWagedTheme()" style="width: 34px; height: 34px; font-size: 14px;">☀️</button>
-        <a href="/" style="display: flex; align-items: center; gap: 4px;" title="واجد">
-          <img src="/logo.svg" alt="Waged" width="24" height="24">
-        </a>
-      </div>
+      <a href="/" style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--text-main);" title="واجد">
+        <img src="/logo.svg" alt="Waged" width="24" height="24">
+        <span>واجد</span>
+      </a>
     </div>
 
-    <!-- Trust Bar -->
-    <div style="background: var(--btn-sec-bg); border-bottom: 1px solid var(--card-border); padding: 7px 16px; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
-      <span>🔒 محادثة مشفرة ومجهولة — لا يتم كشف رقمك</span>
-      <span id="locationBadge" style="display: none; color: #60a5fa; font-weight: 600;">📍 تم إرفاق الموقع</span>
+    <!-- Privacy & 1-Tap Location Bar -->
+    <div class="location-bar" id="locationActionBar">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <i data-lucide="lock" style="width: 14px; height: 14px; color: var(--primary);"></i>
+        <span>محادثة سرية بدون كشف رقمك</span>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="shareLocationBtn" onclick="sendLiveLocationPin()" style="padding: 5px 12px; font-size: 12px; display: none;">
+        <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+        <span>إرسال موقعي للمالك</span>
+      </button>
     </div>
 
     <!-- Lost Mode Urgent Alert -->
     <div id="lostBanner" class="lost-banner" style="display: none;">
-      <span style="font-size: 20px;">🚨</span>
+      <i data-lucide="alert-triangle" style="width: 20px; height: 20px;"></i>
       <div>
-        <strong>تنبيه غرض مفقود!</strong>
-        <div style="font-size: 12px; opacity: 0.92;">المالك يبحث عن هذا الغرض. نرجو مراسلته ومشاركة موقعك لتسليمه.</div>
+        <strong>تنبيه غرض مفقود</strong>
+        <div style="font-size: 12px; opacity: 0.94;">المالك يبحث عن هذا الغرض. نرجو مراسلته ومشاركة موقعك لتسليمه.</div>
       </div>
     </div>
 
     <!-- Owner Custom Message -->
-    <div id="ownerMsgCard" style="display: none; margin: 12px 16px 0; padding: 12px 16px; background: var(--warning-light); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); font-size: 13.5px;">
-      <strong style="color: #fbbf24;">رسالة المالك:</strong>
-      <p id="ownerMsgText" style="margin-top: 3px;"></p>
+    <div id="ownerMsgCard" style="display: none; margin: 12px 16px 0; padding: 11px 14px; background: var(--warning-light); border: 1px solid #fde68a; border-radius: var(--radius-sm); font-size: 13px; color: #92400e;">
+      <strong>ملاحظة المالك:</strong>
+      <p id="ownerMsgText" style="margin-top: 2px;"></p>
     </div>
 
-    <!-- Step 1: Location Prompt (Shown cleanly before chat starts) -->
-    <div id="geoStep" class="geo-card" style="display: none;">
-      <div style="font-size: 32px; margin-bottom: 8px;">📍</div>
-      <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">مشاركة الموقع الجغرافي</h3>
-      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.55;">
-        هل ترغب في مشاركة موقعك الحالي لمساعدة المالك على تحديد مكان الغرض بدقة؟
-      </p>
-      <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-        <button class="btn btn-primary btn-sm" onclick="grantLocation()" id="grantGeoBtn">
-          📍 مشاركة وبدء المحادثة
-        </button>
-        <button class="btn btn-outline btn-sm" onclick="skipLocation()">
-          بدء المحادثة بدون موقع
-        </button>
-      </div>
-    </div>
-
-    <!-- Chat Area -->
+    <!-- Chat Messages (Opens Immediately) -->
     <div class="chat-messages" id="chatMessages">
-      <div style="text-align: center; color: var(--text-muted); margin: auto; font-size: 14px;">جاري تجهيز المحادثة...</div>
+      <div style="text-align: center; color: var(--text-muted); margin: auto; font-size: 13.5px;">جاري فتح المحادثة الآمنة...</div>
     </div>
 
     <div class="typing-indicator" id="typingIndicator">المالك يكتب الآن...</div>
@@ -117,12 +110,13 @@
 
     <!-- Message Input -->
     <form class="chat-input-area" id="chatForm" style="display: none;" onsubmit="handleSendMessage(event)">
-      <button type="button" class="icon-btn" onclick="sendLiveLocationPin()" title="إرسال موقعي الحالي" style="width: 40px; height: 40px; flex-shrink: 0;">
-        📍
+      <button type="button" class="icon-btn" onclick="sendLiveLocationPin()" title="إرسال موقعي الحالي" style="border-radius: 50%; flex-shrink: 0;">
+        <i data-lucide="map-pin"></i>
       </button>
       <input type="text" class="chat-input" id="messageInput" placeholder="اكتب رسالتك للمالك هنا..." required autocomplete="off" oninput="emitTyping()">
-      <button type="submit" class="btn btn-primary" style="border-radius: 999px; padding: 9px 20px;">
-        إرسال
+      <button type="submit" class="btn btn-primary" style="border-radius: 999px; padding: 9px 18px;">
+        <i data-lucide="send"></i>
+        <span>إرسال</span>
       </button>
     </form>
   </div>

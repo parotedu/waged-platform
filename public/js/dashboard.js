@@ -41,17 +41,20 @@ function enableSoundAlerts() {
   soundEnabled = !soundEnabled;
   const btn = document.getElementById('soundToggleBtn');
   if (soundEnabled) {
-    btn.textContent = '🔔';
-    btn.style.borderColor = 'var(--accent)';
+    btn.innerHTML = '<i data-lucide="bell"></i>';
+    btn.style.borderColor = 'var(--primary)';
+    btn.style.color = 'var(--primary)';
     playNotificationChime();
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
     showToast('تم تفعيل صوت التنبيهات اللحظية', 'success');
   } else {
-    btn.textContent = '🔕';
+    btn.innerHTML = '<i data-lucide="bell-off"></i>';
     btn.style.borderColor = 'var(--card-border)';
+    btn.style.color = 'var(--text-secondary)';
   }
+  refreshIcons(btn);
 }
 
 let confirmCallback = null;
@@ -66,14 +69,12 @@ function closeConfirmModal() {
   confirmCallback = null;
 }
 
-// Close open card dropdowns when clicking outside
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.dropdown-wrap')) {
     document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
   }
 });
 
-// Delegated item-card events (safe against XSS / quote escaping issues)
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
@@ -131,7 +132,7 @@ function initSocket() {
 
   socket.on('scan_alert', (alertData) => {
     playNotificationChime();
-    showToast(`🚨 تم مسح رمز: ${alertData.itemName}`, 'warning');
+    showToast(`تنبيه مسح جديد: ${alertData.itemName}`, 'warning');
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('منصة واجد — مسح جديد', { body: `تم مسح رمز ${alertData.itemName}` });
     }
@@ -142,7 +143,7 @@ function initSocket() {
   socket.on('owner_new_message', (msg) => {
     playNotificationChime();
     if (Number(msg.chat_id) !== Number(activeChatId)) {
-      showToast(`💬 رسالة جديدة (${msg.item_name}): ${msg.message.slice(0, 40)}`, 'info');
+      showToast(`رسالة جديدة (${msg.item_name}): ${msg.message.slice(0, 40)}`, 'info');
     }
     loadConversations();
   });
@@ -197,7 +198,6 @@ function updateTelegramUI(user) {
   const settingsInfo = document.getElementById('settingsTgInfo');
   const settingsActions = document.getElementById('settingsTgActions');
 
-  // Auto-link modal setup
   if (user.telegramDeepLink) {
     document.getElementById('tgAutoBox').style.display = 'block';
     document.getElementById('tgDeepLinkBtn').href = user.telegramDeepLink;
@@ -209,29 +209,41 @@ function updateTelegramUI(user) {
     banner.style.display = 'none';
     pill.style.display = 'inline-flex';
     pill.className = 'badge badge-success';
-    pill.innerHTML = `✈️ تليجرام متصل`;
+    pill.innerHTML = '<i data-lucide="check-circle-2"></i><span>تليجرام متصل</span>';
     pill.style.cursor = 'pointer';
     pill.title = 'إعدادات تليجرام';
     pill.onclick = () => showDashboardTab('settings');
+    refreshIcons(pill);
 
-    settingsInfo.innerHTML = `✅ تليجرام متصل بمعرف: <code>${escapeHtml(user.telegram_chat_id)}</code>`;
+    settingsInfo.innerHTML = `تليجرام متصل بالمعرف الرقمي: <code>${escapeHtml(user.telegram_chat_id)}</code>`;
     settingsActions.innerHTML = `
-      <button type="button" class="btn btn-primary btn-sm" onclick="testTelegramAlert()">🧪 إشعار تجريبي</button>
-      <button type="button" class="btn btn-outline btn-sm" onclick="unlinkTelegram()" style="color: #f87171;">إلغاء الربط</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="testTelegramAlert()">
+        <i data-lucide="send"></i>
+        <span>إرسال إشعار تجريبي</span>
+      </button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="unlinkTelegram()" style="color: var(--danger);">
+        <i data-lucide="x"></i>
+        <span>إلغاء الربط</span>
+      </button>
     `;
   } else {
     pill.style.display = 'none';
     banner.style.display = 'flex';
     actionContainer.innerHTML = user.telegramDeepLink
-      ? `<a href="${user.telegramDeepLink}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">✈️ ربط تلقائي الآن</a>
+      ? `<a href="${user.telegramDeepLink}" target="_blank" rel="noopener" class="btn btn-primary btn-sm"><i data-lucide="send"></i><span>ربط تلقائي الآن</span></a>
          <button type="button" class="btn btn-outline btn-sm" onclick="openTgModal()">ربط برقم ID</button>`
-      : `<button type="button" class="btn btn-primary btn-sm" onclick="openTgModal()">⚙️ ربط تليجرام</button>`;
+      : `<button type="button" class="btn btn-primary btn-sm" onclick="openTgModal()"><i data-lucide="settings"></i><span>ربط تليجرام</span></button>`;
 
     settingsInfo.textContent = 'حساب تليجرام غير مربوط بعد.';
     settingsActions.innerHTML = `
-      <button type="button" class="btn btn-primary btn-sm" onclick="openTgModal()">✈️ ربط تليجرام</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="openTgModal()">
+        <i data-lucide="send"></i>
+        <span>ربط تليجرام</span>
+      </button>
     `;
   }
+  refreshIcons(banner);
+  refreshIcons(settingsActions);
 }
 
 async function testTelegramAlert() {
@@ -261,44 +273,66 @@ async function loadItems() {
     const grid = document.getElementById('itemsGrid');
     if (userItems.length === 0) {
       grid.innerHTML = `
-        <div class="card" style="grid-column: 1/-1; text-align: center; padding: 54px 20px; border-style: dashed;">
-          <div style="font-size: 38px; margin-bottom: 12px;">🏷️</div>
-          <h3 style="font-size: 19px; font-weight: 700; margin-bottom: 6px;">لا توجد رموز QR مسجلة بعد</h3>
-          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 18px;">أضف سيارتك أو لابتوبك أو حقيبتك واطبع الملصق فوراً</p>
-          <button class="btn btn-primary" onclick="openCreateModal()">➕ إنشاء أول رمز QR</button>
+        <div class="card" style="grid-column: 1/-1; text-align: center; padding: 48px 20px; background: var(--bg-subtle); border-style: dashed;">
+          <div class="stat-icon" style="width: 54px; height: 54px; margin: 0 auto 14px; border-radius: 14px;">
+            <i data-lucide="qr-code" style="width: 26px; height: 26px;"></i>
+          </div>
+          <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">أنشئ أول رمز QR في ثوانٍ</h3>
+          <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 20px;">اختر نوع الغرض للبدء السريع، أو اضغط إنشاء رمز جديد</p>
+          <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="openCreateModal('car')">
+              <i data-lucide="car"></i>
+              <span>إضافة سيارة</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="openCreateModal('laptop')">
+              <i data-lucide="laptop"></i>
+              <span>إضافة لابتوب</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="openCreateModal('bag')">
+              <i data-lucide="briefcase"></i>
+              <span>إضافة حقيبة / مفاتيح</span>
+            </button>
+          </div>
         </div>
       `;
+      refreshIcons(grid);
       return;
     }
 
+    const catMeta = {
+      car: { icon: 'car', label: 'سيارة' },
+      laptop: { icon: 'laptop', label: 'لابتوب' },
+      bag: { icon: 'briefcase', label: 'حقيبة' },
+      keys: { icon: 'key-round', label: 'مفاتيح' },
+      pet: { icon: 'tag', label: 'أليف' },
+      other: { icon: 'package', label: 'غرض' }
+    };
+
     grid.innerHTML = userItems.map(item => {
-      const catIcon = {
-        car: '🚗 سيارة',
-        laptop: '💻 لابتوب',
-        bag: '💼 حقيبة',
-        keys: '🔑 مفاتيح',
-        pet: '🐾 أليف',
-        other: '📦 غرض'
-      }[item.category] || '📦 غرض';
+      const meta = catMeta[item.category] || catMeta.other;
 
-      let statusBadge = `<span class="badge badge-success">● نشط</span>`;
-      if (item.status === 'lost') statusBadge = `<span class="badge badge-danger">🚨 مفقود</span>`;
-      if (item.status === 'disabled') statusBadge = `<span class="badge badge-warning">معطل</span>`;
+      let statusBadge = '<span class="badge badge-success"><i data-lucide="check-circle-2"></i><span>نشط</span></span>';
+      if (item.status === 'lost') {
+        statusBadge = '<span class="badge badge-danger"><i data-lucide="alert-triangle"></i><span>مفقود</span></span>';
+      } else if (item.status === 'disabled') {
+        statusBadge = '<span class="badge badge-warning"><i data-lucide="pause-circle"></i><span>معطل</span></span>';
+      }
 
-      const lostActionLabel = item.status === 'lost' ? '✅ إنهاء وضع المفقود' : '🚨 تفعيل وضع المفقود';
+      const lostLabel = item.status === 'lost' ? 'إنهاء وضع المفقود' : 'تفعيل وضع المفقود';
+      const lostIcon = item.status === 'lost' ? 'check-circle-2' : 'alert-triangle';
 
       return `
         <div class="card item-card">
           <div>
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
               <div>
-                <div style="display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;">
-                  <span class="badge badge-primary">${catIcon}</span>
+                <div style="display: flex; gap: 6px; margin-bottom: 7px; flex-wrap: wrap;">
+                  <span class="badge badge-primary"><i data-lucide="${meta.icon}"></i><span>${meta.label}</span></span>
                   ${statusBadge}
                 </div>
-                <h3 style="font-size: 17px; font-weight: 700;">${escapeHtml(item.name)}</h3>
+                <h3 style="font-size: 16.5px; font-weight: 700;">${escapeHtml(item.name)}</h3>
               </div>
-              <span class="badge badge-info">${item.scan_count} مسح</span>
+              <span class="badge badge-neutral">${item.scan_count} مسح</span>
             </div>
 
             <div class="item-qr-frame">
@@ -308,28 +342,44 @@ async function loadItems() {
           </div>
 
           <div class="item-card-footer">
-            <a href="/print.html?code=${encodeURIComponent(item.public_code)}" target="_blank" class="btn btn-outline btn-sm" style="flex: 1;">
-              🖨️ طباعة
+            <a href="/print.html?code=${encodeURIComponent(item.public_code)}" target="_blank" class="btn btn-primary btn-sm" style="flex: 1;">
+              <i data-lucide="printer"></i>
+              <span>طباعة</span>
             </a>
             <button type="button" class="btn btn-outline btn-sm" data-action="copy" data-id="${item.id}" style="flex: 1;">
-              🔗 نسخ الرابط
+              <i data-lucide="copy"></i>
+              <span>نسخ</span>
             </button>
+            <a href="/scan.html?code=${encodeURIComponent(item.public_code)}" target="_blank" class="btn btn-outline btn-sm" title="معاينة صفحة المسح">
+              <i data-lucide="external-link"></i>
+            </a>
             <div class="dropdown-wrap">
               <button type="button" class="btn btn-outline btn-sm" data-action="toggle-menu" data-id="${item.id}" title="خيارات إضافية">
-                ⋯
+                <i data-lucide="more-horizontal"></i>
               </button>
               <div class="dropdown-menu">
-                <button type="button" class="dropdown-item" data-action="edit" data-id="${item.id}">✏️ تعديل التفاصيل</button>
-                <button type="button" class="dropdown-item" data-action="toggle-lost" data-id="${item.id}">${lostActionLabel}</button>
-                <button type="button" class="dropdown-item" data-action="scans" data-id="${item.id}">📍 سجل المواقع</button>
-                <button type="button" class="dropdown-item" data-action="download" data-id="${item.id}">📥 تحميل صورة QR</button>
-                <button type="button" class="dropdown-item danger" data-action="delete" data-id="${item.id}">🗑️ حذف الرمز</button>
+                <button type="button" class="dropdown-item" data-action="edit" data-id="${item.id}">
+                  <i data-lucide="pencil"></i><span>تعديل التفاصيل</span>
+                </button>
+                <button type="button" class="dropdown-item" data-action="toggle-lost" data-id="${item.id}">
+                  <i data-lucide="${lostIcon}"></i><span>${lostLabel}</span>
+                </button>
+                <button type="button" class="dropdown-item" data-action="scans" data-id="${item.id}">
+                  <i data-lucide="map-pin"></i><span>سجل المواقع</span>
+                </button>
+                <button type="button" class="dropdown-item" data-action="download" data-id="${item.id}">
+                  <i data-lucide="download"></i><span>تحميل صورة QR</span>
+                </button>
+                <button type="button" class="dropdown-item danger" data-action="delete" data-id="${item.id}">
+                  <i data-lucide="trash-2"></i><span>حذف الرمز</span>
+                </button>
               </div>
             </div>
           </div>
         </div>
       `;
     }).join('');
+    refreshIcons(grid);
   } catch (err) {
     console.error(err);
   }
@@ -344,7 +394,7 @@ async function toggleLostStatus(item) {
       body: JSON.stringify({ status: nextStatus })
     });
     if (!res.ok) throw new Error('تعذر تغيير الحالة');
-    showToast(nextStatus === 'lost' ? '🚨 تم تفعيل وضع المفقودات العاجل' : 'تمت إعادة الغرض للوضع الطبيعي', 'success');
+    showToast(nextStatus === 'lost' ? 'تم تفعيل وضع المفقودات العاجل' : 'تمت إعادة الغرض للوضع الطبيعي', 'success');
     await loadItems();
   } catch (err) {
     showToast(err.message, 'error');
@@ -373,7 +423,7 @@ async function loadConversations() {
     const list = document.getElementById('conversationsList');
     if (convs.length === 0) {
       list.innerHTML = `
-        <div style="color: var(--text-muted); font-size: 13.5px; text-align: center; padding: 36px 10px;">
+        <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 36px 10px;">
           لا توجد محادثات حتى الآن.
         </div>
       `;
@@ -381,7 +431,7 @@ async function loadConversations() {
     }
 
     list.innerHTML = convs.map(c => `
-      <div onclick="openChat(${c.chat_id})" style="padding: 12px; border-radius: var(--radius-sm); border: 1px solid ${activeChatId == c.chat_id ? 'var(--primary)' : 'var(--card-border)'}; background: ${activeChatId == c.chat_id ? 'var(--primary-light)' : 'var(--btn-sec-bg)'}; cursor: pointer; transition: all 0.2s;">
+      <div onclick="openChat(${c.chat_id})" style="padding: 12px; border-radius: var(--radius-sm); border: 1px solid ${activeChatId == c.chat_id ? 'var(--primary)' : 'var(--card-border)'}; background: ${activeChatId == c.chat_id ? 'var(--primary-light)' : '#ffffff'}; cursor: pointer; transition: all 0.16s;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <strong style="font-size: 13.5px;">${escapeHtml(c.item_name)}</strong>
           <div style="display: flex; align-items: center; gap: 6px;">
@@ -393,10 +443,14 @@ async function loadConversations() {
           ${c.last_message ? escapeHtml(c.last_message) : 'محادثة جديدة'}
         </div>
         ${c.scan_lat && c.scan_lng ? `
-          <div style="margin-top: 5px; font-size: 11px; color: #60a5fa;">📍 موقع جغرافي مرفق</div>
+          <div style="margin-top: 5px; font-size: 11px; color: var(--primary); display: flex; align-items: center; gap: 4px;">
+            <i data-lucide="map-pin" style="width: 12px; height: 12px;"></i>
+            <span>موقع جغرافي مرفق</span>
+          </div>
         ` : ''}
       </div>
     `).join('');
+    refreshIcons(list);
   } catch (err) {
     console.error(err);
   }
@@ -422,10 +476,11 @@ async function openChat(chatId) {
     let actionsHtml = '';
     if (data.scanLocation && data.scanLocation.lat && data.scanLocation.lng) {
       const mapUrl = `https://www.google.com/maps?q=${data.scanLocation.lat},${data.scanLocation.lng}`;
-      actionsHtml += `<a href="${mapUrl}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">📍 موقع المسح</a>`;
+      actionsHtml += `<a href="${mapUrl}" target="_blank" rel="noopener" class="btn btn-soft btn-sm"><i data-lucide="map-pin"></i><span>موقع المسح</span></a>`;
     }
-    actionsHtml += `<button type="button" class="btn btn-outline btn-sm" style="color: #f87171;" onclick="deleteActiveChat(${chatId})">🗑️ حذف</button>`;
+    actionsHtml += `<button type="button" class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteActiveChat(${chatId})"><i data-lucide="trash-2"></i><span>حذف</span></button>`;
     actionsEl.innerHTML = actionsHtml;
+    refreshIcons(actionsEl);
 
     if (socket) {
       socket.emit('join_chat', { chatId });
@@ -435,7 +490,7 @@ async function openChat(chatId) {
     loadConversations();
   } catch (err) {
     console.error(err);
-    messagesBox.innerHTML = '<div style="color: #f87171; text-align: center;">فشل في تحميل المحادثة</div>';
+    messagesBox.innerHTML = '<div style="color: var(--danger); text-align: center;">فشل في تحميل المحادثة</div>';
   }
 }
 
@@ -487,8 +542,9 @@ function appendChatMessage(msg, autoScroll = true) {
     const mapUrl = `https://www.google.com/maps?q=${msg.lat},${msg.lng}`;
     locationHtml = `
       <div class="msg-location-card">
-        📍 <strong>موقع المسح:</strong>
-        <a href="${mapUrl}" target="_blank" rel="noopener" style="color: #60a5fa; text-decoration: underline;">
+        <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+        <strong>الموقع:</strong>
+        <a href="${mapUrl}" target="_blank" rel="noopener" style="text-decoration: underline;">
           عرض على Google Maps
         </a>
       </div>
@@ -503,6 +559,7 @@ function appendChatMessage(msg, autoScroll = true) {
   `;
 
   box.appendChild(div);
+  refreshIcons(div);
   if (autoScroll) {
     box.scrollTop = box.scrollHeight;
   }
@@ -539,15 +596,23 @@ async function handleDashSendMessage(e) {
 }
 
 // Create / Edit Item Modal
-function openCreateModal() {
+function selectCategory(cat) {
+  document.getElementById('itemCategory').value = cat;
+  document.querySelectorAll('#catPicker .cat-option').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cat === cat);
+  });
+  updateDefaultMsg();
+}
+
+function openCreateModal(presetCat = 'car') {
   document.getElementById('editItemId').value = '';
   document.getElementById('itemModalTitle').textContent = 'إنشاء رمز QR جديد';
   document.getElementById('itemStatusGroup').style.display = 'none';
   document.getElementById('itemName').value = '';
-  document.getElementById('itemCategory').value = 'car';
   document.getElementById('itemReqLocation').checked = true;
-  updateDefaultMsg();
+  selectCategory(presetCat);
   document.getElementById('createModal').classList.add('active');
+  setTimeout(() => document.getElementById('itemName').focus(), 80);
 }
 
 function openEditModal(id) {
@@ -559,7 +624,7 @@ function openEditModal(id) {
   document.getElementById('itemStatusGroup').style.display = 'block';
   document.getElementById('itemStatusSelect').value = item.status || 'active';
   document.getElementById('itemName').value = item.name;
-  document.getElementById('itemCategory').value = item.category || 'car';
+  selectCategory(item.category || 'car');
   document.getElementById('itemMessage').value = item.custom_message || '';
   document.getElementById('itemReqLocation').checked = Boolean(item.require_location);
   document.getElementById('createModal').classList.add('active');
@@ -572,16 +637,15 @@ function closeCreateModal() {
 function updateDefaultMsg() {
   if (document.getElementById('editItemId').value) return;
   const cat = document.getElementById('itemCategory').value;
-  const msgInput = document.getElementById('itemMessage');
   const defaults = {
-    car: 'لو العربية مزنقة على حضرتك أو في أي طارئ، برجاء مراسلتي هنا فوراً وسأتحرك خلال دقيقتين.',
+    car: 'لو السيارة تغلق الطريق أو في أي طارئ، يرجى مراسلتي هنا فوراً وسأتحرك خلال دقيقتين.',
     laptop: 'إذا عثرت على هذا اللابتوب، أرجو مراسلتي عبر هذه الصفحة لتنسيق استلامه ولك جزيل الشكر.',
-    bag: 'إذا عثرت على هذه الحقيبة، برجاء التواصل معي هنا بأمان لاستعادتها.',
-    keys: 'هذه المفاتيح ملكي، لو وجدتها برجاء مراسلتي هنا وسأكون ممتناً جداً.',
+    bag: 'إذا عثرت على هذه الحقيبة، يرجى التواصل معي هنا بأمان لاستعادتها.',
+    keys: 'هذه المفاتيح ملكي، لو وجدتها يرجى مراسلتي هنا وسأكون ممتناً جداً.',
     pet: 'هذا الأليف ملكي وفي حالة العثور عليه أرجو التواصل معي فوراً.',
-    other: 'في حالة العثور على هذا الغرض، برجاء التواصل معي هنا بأمان وسرية.'
+    other: 'في حالة العثور على هذا الغرض، يرجى التواصل معي هنا بأمان وسرية.'
   };
-  msgInput.value = defaults[cat] || defaults.other;
+  document.getElementById('itemMessage').value = defaults[cat] || defaults.other;
 }
 
 async function handleSaveItem(e) {
@@ -691,11 +755,11 @@ function renderBillingPlans() {
             <span class="badge ${isCurrent ? 'badge-success' : 'badge-primary'}">${isCurrent ? 'باقتك الحالية' : plan.badge}</span>
           </div>
           <div class="pricing-price">
-            ${price === 0 ? 'مجاناً' : `${price} <span style="font-size:16px;">${plan.currency}</span>`}
+            ${price === 0 ? 'مجاناً' : `${price} <span style="font-size:15px;">${plan.currency}</span>`}
             ${price > 0 ? `<span>${periodLabel}</span>` : ''}
           </div>
           <ul class="pricing-features">
-            ${plan.features.map(f => `<li>✓ <span>${f}</span></li>`).join('')}
+            ${plan.features.map(f => `<li><i data-lucide="check" style="color: var(--accent);"></i><span>${f}</span></li>`).join('')}
           </ul>
         </div>
         <button
@@ -708,6 +772,7 @@ function renderBillingPlans() {
       </div>
     `;
   }).join('');
+  refreshIcons(grid);
 }
 
 async function subscribePlan(planId) {
@@ -741,7 +806,7 @@ function renderInvoices(invoices) {
   box.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 10px;">
       ${invoices.map(inv => `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; background: var(--btn-sec-bg); border-radius: 10px; border: 1px solid var(--card-border); flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; background: var(--bg-subtle); border-radius: 10px; border: 1px solid var(--card-border); flex-wrap: wrap; gap: 8px;">
           <div>
             <strong>#${escapeHtml(inv.reference_code)}</strong> — <span class="badge badge-primary">${escapeHtml(inv.plan_id.toUpperCase())}</span>
             <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${new Date(inv.created_at).toLocaleString('ar-EG')}</div>
@@ -879,13 +944,14 @@ async function viewScans(itemId, itemName) {
           if (s.latitude && s.longitude) {
             const url = `https://www.google.com/maps?q=${s.latitude},${s.longitude}`;
             mapHtml = `
-              <a href="${url}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="font-size: 12px; padding: 5px 12px;">
-                📍 الخريطة (${s.latitude.toFixed(4)}, ${s.longitude.toFixed(4)})
+              <a href="${url}" target="_blank" rel="noopener" class="btn btn-soft btn-sm" style="font-size: 12px; padding: 5px 12px;">
+                <i data-lucide="map-pin"></i>
+                <span>الخريطة (${s.latitude.toFixed(4)}, ${s.longitude.toFixed(4)})</span>
               </a>
             `;
           }
           return `
-            <div style="padding: 12px 14px; background: var(--btn-sec-bg); border: 1px solid var(--card-border); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="padding: 12px 14px; background: var(--bg-subtle); border: 1px solid var(--card-border); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
               <div>
                 <div style="font-weight: 600; font-size: 13.5px;">مسح رمز QR</div>
                 <div style="font-size: 12px; color: var(--text-muted);">${new Date(s.created_at).toLocaleString('ar-EG')}</div>
@@ -896,8 +962,9 @@ async function viewScans(itemId, itemName) {
         }).join('')}
       </div>
     `;
+    refreshIcons(content);
   } catch (err) {
-    content.innerHTML = '<div style="color: #f87171;">فشل في جلب السجل</div>';
+    content.innerHTML = '<div style="color: var(--danger);">فشل في جلب السجل</div>';
   }
 }
 function closeScansModal() {

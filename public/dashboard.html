@@ -3,106 +3,113 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#8b5cf6">
-  <title>لوحة التحكم — منصة واجد</title>
+  <meta name="theme-color" content="#2563eb">
+  <title>لوحة التحكم — واجد</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <script src="/js/lucide.min.js"></script>
   <script src="/js/theme.js"></script>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-  <div class="ambient-bg">
-    <div class="ambient-orb orb-1"></div>
-    <div class="ambient-orb orb-2"></div>
-  </div>
-
   <!-- Top Navbar -->
   <nav class="navbar">
     <div class="container nav-container">
       <a href="/" class="logo">
         <div class="logo-icon-wrap">
-          <img src="/logo.svg" alt="Waged Logo">
+          <img src="/logo.svg" alt="شعار واجد">
         </div>
-        <span>واجد <small class="mono brand-gradient-text" style="font-size: 13px;">Waged</small></span>
+        <span>واجد <small class="mono" style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Waged</small></span>
       </a>
       <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
         <span class="badge badge-primary nav-hide-mobile" id="userPlanBadge">الباقة المجانية</span>
-        <span id="userNameBadge" class="nav-hide-mobile" style="font-weight: 600; font-size: 13.5px;"></span>
-        <button type="button" class="icon-btn" onclick="enableSoundAlerts()" id="soundToggleBtn" title="تفعيل صوت التنبيهات">🔕</button>
-        <button type="button" class="icon-btn theme-toggle-btn" onclick="toggleWagedTheme()" title="تغيير المظهر">☀️</button>
-        <button onclick="handleLogout()" class="btn btn-outline btn-sm">خروج</button>
+        <span id="userNameBadge" class="nav-hide-mobile" style="font-weight: 600; font-size: 13.5px; color: var(--text-secondary);"></span>
+        <button type="button" class="icon-btn" onclick="enableSoundAlerts()" id="soundToggleBtn" title="تفعيل صوت التنبيهات">
+          <i data-lucide="bell-off"></i>
+        </button>
+        <button onclick="handleLogout()" class="btn btn-outline btn-sm">
+          <i data-lucide="log-out"></i>
+          <span class="nav-hide-mobile">خروج</span>
+        </button>
       </div>
     </div>
   </nav>
 
-  <div class="container" style="padding-top: 20px; padding-bottom: 64px;">
+  <div class="container" style="padding-top: 22px; padding-bottom: 64px;">
 
     <!-- Header -->
     <div class="dash-header">
       <div>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <h1 style="font-size: 26px; font-weight: 700;">لوحة التحكم</h1>
+          <h1 style="font-size: 25px; font-weight: 700;">لوحة التحكم</h1>
           <span id="tgConnectedPill" style="display: none;"></span>
         </div>
-        <p style="color: var(--text-muted); font-size: 14px;">إدارة رموز الـ QR، التنبيهات اللحظية، والاشتراك</p>
+        <p style="color: var(--text-muted); font-size: 13.5px;">أنشئ رموزك واطبعها وتابع المحادثات بسهولة</p>
       </div>
       <button class="btn btn-primary" onclick="openCreateModal()">
-        ➕ رمز QR جديد
+        <i data-lucide="plus"></i>
+        <span>إنشاء رمز QR جديد</span>
       </button>
     </div>
 
     <!-- Compact Telegram Prompt (Shown only when unlinked) -->
     <div class="tg-strip" id="telegramBanner" style="display: none;">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <span style="font-size: 22px;">✈️</span>
+        <div class="stat-icon" style="background: #ffffff; color: var(--primary);">
+          <i data-lucide="send"></i>
+        </div>
         <div>
-          <strong style="font-size: 14px;">تنبيهات تليجرام غير مفعلة</strong>
-          <div style="font-size: 12.5px; color: var(--text-muted);">اربط حسابك ليصلك إشعار فوري برابط الخريطة بمجرد مسح رمزك.</div>
+          <strong style="font-size: 14px;">اربط تليجرام لاستقبال التنبيهات الفورية</strong>
+          <div style="font-size: 12.5px; color: var(--text-muted);">يصلك إشعار مباشر برابط الخريطة بمجرد أن يمسح أي شخص رمزك.</div>
         </div>
       </div>
       <div id="tgActionContainer" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
     </div>
 
-    <!-- Compact Stats Row -->
+    <!-- Stats Row -->
     <div class="stats-row">
       <div class="stat-chip">
         <div>
           <div class="stat-label">رموز الـ QR</div>
           <div class="stat-value" id="statItems">0 / 2</div>
         </div>
-        <span style="font-size: 24px; opacity: 0.75;">🏷️</span>
+        <div class="stat-icon"><i data-lucide="qr-code"></i></div>
       </div>
       <div class="stat-chip">
         <div>
           <div class="stat-label">مرات المسح</div>
           <div class="stat-value" id="statScans">0</div>
         </div>
-        <span style="font-size: 24px; opacity: 0.75;">📡</span>
+        <div class="stat-icon"><i data-lucide="radio"></i></div>
       </div>
       <div class="stat-chip">
         <div>
           <div class="stat-label">المحادثات</div>
           <div class="stat-value" id="statChats">0</div>
         </div>
-        <span style="font-size: 24px; opacity: 0.75;">💬</span>
+        <div class="stat-icon"><i data-lucide="message-square"></i></div>
       </div>
     </div>
 
     <!-- Segmented Tabs -->
     <div class="segmented-tabs">
       <button type="button" class="seg-btn active" id="tabItemsBtn" onclick="showDashboardTab('items')">
-        📦 أغراضي ورموز الـ QR
+        <i data-lucide="qr-code"></i>
+        <span>أغراضي ورموزي</span>
       </button>
       <button type="button" class="seg-btn" id="tabInboxBtn" onclick="showDashboardTab('inbox')">
-        💬 المحادثات (<span id="inboxBadge">0</span>)
+        <i data-lucide="message-square"></i>
+        <span>المحادثات (<span id="inboxBadge">0</span>)</span>
       </button>
       <button type="button" class="seg-btn" id="tabBillingBtn" onclick="showDashboardTab('billing')">
-        💳 الاشتراك والباقات
+        <i data-lucide="credit-card"></i>
+        <span>الاشتراك</span>
       </button>
       <button type="button" class="seg-btn" id="tabSettingsBtn" onclick="showDashboardTab('settings')">
-        ⚙️ الإعدادات
+        <i data-lucide="settings"></i>
+        <span>الإعدادات</span>
       </button>
     </div>
 
@@ -119,7 +126,7 @@
     <div id="inboxSection" style="display: none;">
       <div style="display: grid; grid-template-columns: 320px 1fr; gap: 18px;" id="inboxLayout">
         <div class="card" style="padding: 14px; overflow-y: auto; max-height: 68vh;">
-          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">المحادثات الواردة</h3>
+          <h3 style="font-size: 14.5px; font-weight: 700; margin-bottom: 12px;">المحادثات الواردة</h3>
           <div id="conversationsList" style="display: flex; flex-direction: column; gap: 8px;">
             <div style="color: var(--text-muted); font-size: 13.5px; text-align: center; padding: 24px;">
               لا توجد محادثات حتى الآن.
@@ -128,17 +135,17 @@
         </div>
 
         <div class="card" style="padding: 0; display: flex; flex-direction: column; overflow: hidden; height: 68vh;">
-          <div style="padding: 14px 18px; border-bottom: 1px solid var(--card-border); background: var(--nav-bg); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--card-border); background: var(--bg-subtle); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
             <div>
-              <h3 id="activeChatTitle" style="font-size: 15.5px; font-weight: 700;">اختر محادثة من القائمة</h3>
+              <h3 id="activeChatTitle" style="font-size: 15px; font-weight: 700;">اختر محادثة من القائمة</h3>
               <p id="activeChatSub" style="font-size: 12px; color: var(--text-muted);">تواصل آمن ومجهول</p>
             </div>
             <div id="activeChatActions" style="display: flex; gap: 8px; align-items: center;"></div>
           </div>
 
           <div class="chat-messages" id="dashChatMessages">
-            <div style="text-align: center; color: var(--text-muted); margin: auto; font-size: 14px;">
-              اختر محادثة للبدء بالرد الفوري على الزائر
+            <div style="text-align: center; color: var(--text-muted); margin: auto; font-size: 13.5px;">
+              اختر محادثة من القائمة للرد المباشر على الزائر
             </div>
           </div>
 
@@ -146,7 +153,10 @@
 
           <form id="dashChatForm" class="chat-input-area" style="display: none;" onsubmit="handleDashSendMessage(event)">
             <input type="text" class="chat-input" id="dashChatInput" placeholder="اكتب ردك هنا..." required autocomplete="off" oninput="emitDashTyping()">
-            <button type="submit" class="btn btn-primary" style="border-radius: 999px; padding: 9px 20px;">إرسال</button>
+            <button type="submit" class="btn btn-primary" style="border-radius: 999px; padding: 9px 18px;">
+              <i data-lucide="send"></i>
+              <span>إرسال</span>
+            </button>
           </form>
         </div>
       </div>
@@ -157,15 +167,15 @@
       <div class="card" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
         <div>
           <span class="badge badge-success" style="margin-bottom: 6px;">باقتك الحالية</span>
-          <h2 style="font-size: 22px; font-weight: 700;" id="billingCurrentPlanName">الباقة المجانية</h2>
-          <p style="color: var(--text-muted); font-size: 13.5px;" id="billingUsageText">الاستخدام: 0 من 2 رموز</p>
+          <h2 style="font-size: 21px; font-weight: 700;" id="billingCurrentPlanName">الباقة المجانية</h2>
+          <p style="color: var(--text-muted); font-size: 13px;" id="billingUsageText">الاستخدام: 0 من 2 رموز</p>
         </div>
         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
           <select id="billingCycleSelect" class="form-control" style="width: auto;" onchange="renderBillingPlans()">
             <option value="monthly">دفع شهري</option>
             <option value="yearly">دفع سنوي (وفر 20%)</option>
           </select>
-          <input type="text" id="promoCodeInput" class="form-control" placeholder="كود خصم (مثال: PAROT100)" style="width: 195px;">
+          <input type="text" id="promoCodeInput" class="form-control" placeholder="كود خصم (اختياري)" style="width: 175px;">
         </div>
       </div>
 
@@ -173,7 +183,7 @@
 
       <div class="card" style="margin-top: 22px;">
         <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">سجل الفواتير والاشتراكات</h3>
-        <div id="invoicesList" style="font-size: 13.5px; color: var(--text-muted);">لا توجد فواتير سابقة.</div>
+        <div id="invoicesList" style="font-size: 13px; color: var(--text-muted);">لا توجد فواتير سابقة.</div>
       </div>
     </div>
 
@@ -181,7 +191,10 @@
     <div id="settingsSection" style="display: none;">
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px;">
         <div class="card">
-          <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 16px;">👤 بيانات الحساب</h3>
+          <h3 style="font-size: 16.5px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="user"></i>
+            <span>بيانات الحساب</span>
+          </h3>
           <form onsubmit="handleUpdateProfile(event)">
             <div class="form-group">
               <label class="form-label">الاسم بالكامل</label>
@@ -189,7 +202,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">البريد الإلكتروني</label>
-              <input type="email" class="form-control" id="settingsEmail" disabled style="opacity: 0.7;">
+              <input type="email" class="form-control" id="settingsEmail" disabled style="background: var(--bg-subtle); color: var(--text-muted);">
             </div>
             <div class="form-group">
               <label class="form-label">رقم الهاتف (محمي ولا يظهر لأحد)</label>
@@ -200,7 +213,10 @@
         </div>
 
         <div class="card">
-          <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 16px;">🔐 تغيير كلمة المرور</h3>
+          <h3 style="font-size: 16.5px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="lock"></i>
+            <span>تغيير كلمة المرور</span>
+          </h3>
           <form onsubmit="handleChangePassword(event)">
             <div class="form-group">
               <label class="form-label">كلمة المرور الحالية</label>
@@ -215,7 +231,10 @@
         </div>
 
         <div class="card">
-          <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">✈️ تليجرام و Webhook</h3>
+          <h3 style="font-size: 16.5px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="send"></i>
+            <span>إعدادات تليجرام و Webhook</span>
+          </h3>
           <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;" id="settingsTgInfo">
             أدر إعدادات التنبيهات الفورية والربط الخارجي.
           </p>
@@ -226,7 +245,10 @@
               <label class="form-label">رابط Webhook مخصص (لباقة Pro والأعمال)</label>
               <input type="url" class="form-control" id="webhookUrlInput" placeholder="https://example.com/webhook/waged">
             </div>
-            <button type="submit" class="btn btn-outline btn-sm">حفظ Webhook</button>
+            <button type="submit" class="btn btn-outline btn-sm">
+              <i data-lucide="link-2"></i>
+              <span>حفظ Webhook</span>
+            </button>
           </form>
         </div>
       </div>
@@ -238,22 +260,45 @@
   <div class="modal-overlay" id="createModal">
     <div class="modal">
       <div class="modal-header">
-        <h3 style="font-size: 18px; font-weight: 700;" id="itemModalTitle">إنشاء رمز QR جديد</h3>
-        <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+        <h3 style="font-size: 17.5px; font-weight: 700;" id="itemModalTitle">إنشاء رمز QR جديد</h3>
+        <button class="modal-close" onclick="closeCreateModal()">
+          <i data-lucide="x"></i>
+        </button>
       </div>
       <form onsubmit="handleSaveItem(event)">
         <input type="hidden" id="editItemId" value="">
+        <input type="hidden" id="itemCategory" value="car">
+
         <div class="form-group">
-          <label class="form-label">نوع الغرض</label>
-          <select class="form-control" id="itemCategory" onchange="updateDefaultMsg()">
-            <option value="car">🚗 سيارة / مركبة</option>
-            <option value="laptop">💻 لابتوب / جهاز إلكتروني</option>
-            <option value="bag">💼 حقيبة / محفظة</option>
-            <option value="keys">🔑 مفاتيح</option>
-            <option value="pet">🐾 حيوان أليف</option>
-            <option value="other">📦 غرض آخر</option>
-          </select>
+          <label class="form-label">اختر نوع الغرض</label>
+          <div class="cat-picker" id="catPicker">
+            <button type="button" class="cat-option active" data-cat="car" onclick="selectCategory('car')">
+              <i data-lucide="car"></i>
+              <span>سيارة</span>
+            </button>
+            <button type="button" class="cat-option" data-cat="laptop" onclick="selectCategory('laptop')">
+              <i data-lucide="laptop"></i>
+              <span>لابتوب</span>
+            </button>
+            <button type="button" class="cat-option" data-cat="bag" onclick="selectCategory('bag')">
+              <i data-lucide="briefcase"></i>
+              <span>حقيبة</span>
+            </button>
+            <button type="button" class="cat-option" data-cat="keys" onclick="selectCategory('keys')">
+              <i data-lucide="key-round"></i>
+              <span>مفاتيح</span>
+            </button>
+            <button type="button" class="cat-option" data-cat="pet" onclick="selectCategory('pet')">
+              <i data-lucide="tag"></i>
+              <span>أليف</span>
+            </button>
+            <button type="button" class="cat-option" data-cat="other" onclick="selectCategory('other')">
+              <i data-lucide="package"></i>
+              <span>غرض آخر</span>
+            </button>
+          </div>
         </div>
+
         <div class="form-group">
           <label class="form-label">اسم الغرض</label>
           <input type="text" class="form-control" id="itemName" required placeholder="مثال: عربيتي كيا سيراتو">
@@ -261,9 +306,9 @@
         <div class="form-group" id="itemStatusGroup" style="display: none;">
           <label class="form-label">حالة الغرض</label>
           <select class="form-control" id="itemStatusSelect">
-            <option value="active">🟢 نشط</option>
-            <option value="lost">🚨 مفقود (تنبيه عاجل)</option>
-            <option value="disabled">⛔ معطل مؤقتاً</option>
+            <option value="active">نشط (الوضع الطبيعي)</option>
+            <option value="lost">مفقود (تنبيه عاجل)</option>
+            <option value="disabled">معطل مؤقتاً</option>
           </select>
         </div>
         <div class="form-group">
@@ -272,8 +317,8 @@
         </div>
         <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
           <input type="checkbox" id="itemReqLocation" checked style="width: 17px; height: 17px;">
-          <label for="itemReqLocation" style="font-weight: 600; font-size: 13.5px; cursor: pointer;">
-            طلب الموقع الجغرافي (GPS) عند المسح
+          <label for="itemReqLocation" style="font-weight: 500; font-size: 13px; cursor: pointer;">
+            إتاحة إرسال الموقع الجغرافي (GPS) عند المسح
           </label>
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;" id="createItemBtn">
@@ -287,19 +332,23 @@
   <div class="modal-overlay" id="tgModal">
     <div class="modal">
       <div class="modal-header">
-        <h3 style="font-size: 18px; font-weight: 700;">ربط إشعارات تليجرام ✈️</h3>
-        <button class="modal-close" onclick="closeTgModal()">&times;</button>
+        <h3 style="font-size: 17.5px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="send"></i>
+          <span>ربط إشعارات تليجرام</span>
+        </h3>
+        <button class="modal-close" onclick="closeTgModal()"><i data-lucide="x"></i></button>
       </div>
-      <div id="tgAutoBox" style="display: none; margin-bottom: 18px; padding: 14px; border-radius: 12px; background: var(--primary-light); border: 1px solid rgba(139,92,246,0.35);">
+      <div id="tgAutoBox" style="display: none; margin-bottom: 18px; padding: 14px; border-radius: 12px; background: var(--primary-light); border: 1px solid var(--primary-border);">
         <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px;">الربط التلقائي بضغطة واحدة</div>
         <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">افتح البوت واضغط Start ليتم ربط حسابك فوراً دون إدخال أي أرقام:</p>
         <a id="tgDeepLinkBtn" href="#" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="width: 100%;">
-          ✈️ فتح بوت واجد والربط التلقائي
+          <i data-lucide="send"></i>
+          <span>فتح بوت واجد والربط التلقائي</span>
         </a>
       </div>
       <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.7;">
-        <strong>أو الربط اليدوي عبر Chat ID:</strong><br>
-        احصل على معرفك الرقمي من بوت <a href="https://t.me/userinfobot" target="_blank" rel="noopener" style="color: #60a5fa; text-decoration: underline;">@userinfobot</a> وأدخله أدناه:
+        <strong>الربط اليدوي عبر Chat ID:</strong><br>
+        احصل على معرفك الرقمي من بوت <a href="https://t.me/userinfobot" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline;">@userinfobot</a> وأدخله أدناه:
       </div>
       <form onsubmit="handleSaveTgChatId(event)">
         <div class="form-group">
@@ -316,10 +365,10 @@
 
   <!-- Scan History Modal -->
   <div class="modal-overlay" id="scansModal">
-    <div class="modal" style="max-width: 620px;">
+    <div class="modal" style="max-width: 600px;">
       <div class="modal-header">
-        <h3 style="font-size: 18px; font-weight: 700;" id="scansModalTitle">سجل المسح والمواقع</h3>
-        <button class="modal-close" onclick="closeScansModal()">&times;</button>
+        <h3 style="font-size: 17.5px; font-weight: 700;" id="scansModalTitle">سجل المسح والمواقع</h3>
+        <button class="modal-close" onclick="closeScansModal()"><i data-lucide="x"></i></button>
       </div>
       <div id="scansModalContent" style="max-height: 60vh; overflow-y: auto;"></div>
     </div>
@@ -328,8 +377,10 @@
   <!-- Confirmation Modal -->
   <div class="modal-overlay" id="confirmModal">
     <div class="modal" style="max-width: 400px; text-align: center;">
-      <div style="font-size: 32px; margin-bottom: 10px;">⚠️</div>
-      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;" id="confirmTitle">تأكيد الإجراء</h3>
+      <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--danger-light); color: var(--danger); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+        <i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i>
+      </div>
+      <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 6px;" id="confirmTitle">تأكيد الإجراء</h3>
       <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;" id="confirmText"></p>
       <div style="display: flex; gap: 10px;">
         <button class="btn btn-danger btn-sm" id="confirmYesBtn" style="flex: 1;">تأكيد</button>
@@ -339,7 +390,6 @@
   </div>
 
   <div class="toast-container" id="toastContainer"></div>
-
   <script src="/js/dashboard.js"></script>
 </body>
 </html>
